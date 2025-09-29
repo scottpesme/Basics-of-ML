@@ -3,8 +3,6 @@
 \subsection{Definitions and notations}
 
 Keep in mind that these are the notations I like to use, but these are obviously personal and others will use different ones!!
-
-In the following I use the following notations:
 \begin{itemize}
     \item the notation $x$ will always be used for input data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point. Similarly, $y$ will used for output data, e.g. $y_1, \dots, y_n \in \R$ (or $\in \{0, 1\}$) are output data (or labels).
     \item $X = \begin{pmatrix}
@@ -14,12 +12,19 @@ In the following I use the following notations:
 \end{pmatrix}
 \in \mathbb{R}^{n \times d}$ corresponds to data / feature / design /observation matrix. It has $n = \textit{"number \ of \ samples"}$ rows and $d = \textit{"dimension \ of \ datapoints"}$ columns.
     \item $y = (y_1, \dots, y_n) \in \R^{n}$ corresponds to the output vector.
+    \item for a vector $u \in \R^d$, we let $\Vert u \Vert_2 \coloneqq \sqrt{\sum_{i = 1}^d u_i^2}$ denote the Euclidean norm of $u$ (also called $\ell_2$-norm).
+    \item for vectors $u, v \in \R^d$, we denote $\langle u, v \rangle \coloneqq \sum_{i = 1}^d u_i, v_i$ to be the inner product of $u$ and $v$. Notice that $\Vert u \Vert^2 = \langle u, u \rangle$. Two vectors are said to be orthogonal if their inner product is null.
+    \item for vectors $x_1, \dots, x_n$, their span corresponds to the linear space which they generate: $\span(x_1, \dots, x_n) \coloneqq \{ \lambda_1 x_1 + \dots, \lambda_n x_n , \text{where} \  \lambda_1, \dots, \lambda_n \in \R \}$.
+    \item the rank of a matrix corresponds to the dimension of the span of its columns, which is equal to the dimension of the span of its rows. Therefore for $X \in \R^{n \times d}$, it holds that $\rank(X) \leq \min(n, d)$. A matrix is said to be full rank if $\rank(X) = \min(n, d)$.
+    \item a matrix $A \in \R^{d \times d}$ is said to be symmetric if $A^{\top} = A$. It is said to be positive semi-definite (we write this as  $A \succeq 0$) if for all vector $u \in \R^d$, $u^\top A u \geq 0$. This is equivalent to saying that all the eigenvalues of $A$ are positive.
+    \item the null space (sometimes called kernel) of a matrix $A \in \R^{n \times d}$ is defined as $\ker(A) = \{ w \in \R^d, A w = 0 \}$. 
 \end{itemize}
 
 \subsection{Gradients}
 
 % \begin
-If $f : \R^d \to \R$ is differentiable, then its gradient $\nabla f : \R^d \to \R^d$ is defined as: $\nabla f(w) = ... $
+If $f : \R^d \to \R$ is twice differentiable, then its gradient $\nabla f : \R^d \to \R^d$ and hessian $\nabla^2 f : \R^d \to \R^{d \times d}$ are defined as: 
+\[\nabla f(w) = \Big ( \frac{\partial f}{\partial w_i}(w) \Big )_{1 \leq i \leq d} \quad \nabla^2 f(w) = \Big ( \frac{\partial^2 f}{\partial w_i \partial w_i}(w) \Big )_{1 \leq i, j \leq d} \] 
 
 \begin{itemize}
     \item For a vector $b \in \R^d$, the gradient of the linear function $f : \R^d \to \R$, $f(w) = \langle a , w \rangle $ is equal to $\nabla f(w) = b$. 
@@ -33,8 +38,17 @@ If $f : \R^d \to \R$ is differentiable, then its gradient $\nabla f : \R^d \to \
     \item It holds that $X^\top X = \sum_{i=1}^n x_i x_i^\top \in \R^{d \times d}$ and $X X^\top = \big (\langle x_i, x_j \rangle \big )_{1 \leq i, j \leq n} \in \R^{n \times n}$.
     \item Let $L(w) = \frac{1}{2} \sum_{i = 1}^n (y_i - \langle w, x_i \rangle)^2$, then $L(w) = \frac{1}{2} \Vert y - X w \Vert^2$ and $\nabla L(w) = X^\top (X w - y)$.
     \item if $n < d$ ("underparametrised setting), then the matrix $X^\top X$ cannot be invertible, because $\span (x_1, \dots, x_n)$ cannot be equal to $\R^d$. However, if $n \geq d$ and $\span (x_1, \dots, x_n) = \R^d$, then $X^\top X$ is invertible.
+    \item \textit{Rank–nullity theorem:} for $A \in \R^{d \times n}$, it holds that $\rank(A) + \dim \ker(A) = d$.
 \end{itemize}
 
+\subsection{Convexity}
+
+A function $f:\R^d \to \R$ is said to be convex if for all $w_1, w_2 \in \R^d$ and $\lambda \in [0, 1]$, $f(\lambda w_1 + (1 - \lambda) w_2) \leq \lambda f(w_1) + (1 - \lambda) f(w_2)$ (DO A DRAWING TO VISUALISE THIS!). 
+
+\begin{itemize}
+    \item if $f$ is convex and differentiable, then for all $w_1, w_2 \in \R^d$, it holds that $f(w_2) \geq f(w_1) + \langle \nabla f(w_1), w_2 - w_1 \rangle$ (DO A DRAWING TO VISUALISE THIS!).
+    \item if $f$ is convex, then all local minima are global. Therefore, if $\nabla f(w^\star) = 0$, then $w^\star$ is a global minimum. However, keep in mind that there exist convex functions which do not have any minima! (the exponential function for example)
+\end{itemize}
 
 \subsection{Good practices and sanity checks}
 
@@ -42,7 +56,7 @@ If $f : \R^d \to \R$ is differentiable, then its gradient $\nabla f : \R^d \to \
 
 \begin{itemize}
     \item  If $f : \R^d \to \R$, then for a vector $w \in \R^d$, $\nabla f(w)$ must belong to $\R^d$! So for example if $f(w) = \frac{1}{2} \Vert x \Vert^2$, then writing that "$\nabla f(w) = \Vert x \Vert$" doesn't make sense. 
-    \item Check that the matrix operations are allowed: if $L(w) = \Vert y - X w \Vert^2$, writing that "$\nabla L(w) = X (X w -y)$" doesn't make sense because the operations $X X$ and $X y$ don't make sense for $n \neq d$.
+    \item Check that the matrix operations are allowed: if $L(w) = \Vert y - X w \Vert^2$, writing that "$\nabla L(w) = X (X w -y)$" doesn't make sense because the operations $X X$ and $X y$ don't make sense for $n \neq d$ (and also because of the remark right above).
 \end{itemize}
 
 
