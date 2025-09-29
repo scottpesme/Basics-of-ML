@@ -16,8 +16,8 @@ Keep in mind that these are the notations I like to use, but these are obviously
     \item for vectors $u, v \in \R^d$, we denote $\langle u, v \rangle \coloneqq \sum_{i = 1}^d u_i, v_i$ to be the inner product of $u$ and $v$. Notice that $\Vert u \Vert^2 = \langle u, u \rangle$. Two vectors are said to be orthogonal if their inner product is null.
     \item for vectors $x_1, \dots, x_n$, their span corresponds to the linear space which they generate: $\span(x_1, \dots, x_n) \coloneqq \{ \lambda_1 x_1 + \dots, \lambda_n x_n , \text{where} \  \lambda_1, \dots, \lambda_n \in \R \}$.
     \item the rank of a matrix corresponds to the dimension of the span of its columns, which is equal to the dimension of the span of its rows. Therefore for $X \in \R^{n \times d}$, it holds that $\rank(X) \leq \min(n, d)$. A matrix is said to be full rank if $\rank(X) = \min(n, d)$.
-    \item a matrix $A \in \R^{d \times d}$ is said to be symmetric if $A^{\top} = A$. It is said to be positive semi-definite (we write this as  $A \succeq 0$) if for all vector $u \in \R^d$, $u^\top A u \geq 0$. This is equivalent to saying that all the eigenvalues of $A$ are positive.
-    \item the null space (sometimes called kernel) of a matrix $A \in \R^{n \times d}$ is defined as $\ker(A) = \{ w \in \R^d, A w = 0 \}$. 
+    \item the null space (sometimes called kernel) of a matrix $A \in \R^{n \times d}$ is defined as $\ker(A) = \{ w \in \R^d, A w = 0 \}$.
+    \item a matrix $A \in \R^{d \times d}$ is said to be symmetric if $A^{\top} = A$. It is said to be positive semi-definite (we write this as  $A \succeq 0$) if for all vector $u \in \R^d$, $u^\top A u \geq 0$. This is equivalent to saying that all the eigenvalues of $A$ are positive. 
 \end{itemize}
 
 \subsection{Gradients}
@@ -48,6 +48,7 @@ A function $f:\R^d \to \R$ is said to be convex if for all $w_1, w_2 \in \R^d$ a
 \begin{itemize}
     \item if $f$ is convex and differentiable, then for all $w_1, w_2 \in \R^d$, it holds that $f(w_2) \geq f(w_1) + \langle \nabla f(w_1), w_2 - w_1 \rangle$ (DO A DRAWING TO VISUALISE THIS!).
     \item if $f$ is convex, then all local minima are global. Therefore, if $\nabla f(w^\star) = 0$, then $w^\star$ is a global minimum. However, keep in mind that there exist convex functions which do not have any minima! (the exponential function for example)
+    \item if a function $f$ is convex, then its sublevel sets $\{ w \in \R^d, f(w) \leq c \}$ are convex sets for all $c \in \R$. The converse is false (for example think of $x \mapsto \sqrt{|x|}$ in 1d).
 \end{itemize}
 
 \subsection{Good practices and sanity checks}
