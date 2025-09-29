@@ -1,0 +1,37 @@
+\section{Cheat Sheet of Useful Formulas}
+
+\subsection{Definitions and notations}
+
+Keep in mind that these are the notations I like to use, but these are obviously personal and others will use different ones!!
+
+In the following I use the following notations:
+\begin{itemize}
+    \item $x$ will always correspond to data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point.
+    \item $X = \begin{pmatrix}
+- & x_1 & - \\
+  & \vdots &  \\
+- & x_n & -
+\end{pmatrix}
+\in \mathbb{R}^{n \times d}$ corresponds to data / feature / design /observation matrix. It has $n = \textit{"number \ of \ samples"}$ rows and $d = \textit{"dimension \ of \ datapoints"}$ columns.
+\end{itemize}
+
+\subsection{Gradients}
+
+% \begin
+If $f : \R^d \to \R$ is differentiable, then its gradient $\nabla f : \R^d \to \R^d$ is defined as: $\nabla f(w) = ... $
+
+\begin{itemize}
+    \item For a vector $b \in \R^d$, the gradient of the linear function $f : \R^d \to \R$, $f(w) = \langle a , w \rangle $ is equal to $\nabla f(w) = b$. 
+    \item For a (not necessarily symmetric) matrix $A \in \R^{d \times d}$, $f(w) = w^\top A w$ is a quadratic function. Its gradient is $\nabla f(w) = \frac{1}{2} (A + A^\top) w$, which is equal to $A w$ iff $A$ is a symmetric matrix. The hessian of $f$ is equal to $\nabla^2 f(w) = \frac{1}{2} (A + A^\top)$. 
+\end{itemize}
+
+\subsection{Linear Algebra}
+
+\begin{itemize}
+    \item For a matrix $A \in \R^{d \times d}$, it holds that $w^\top A w = \sum_{i, j = 1}^d w_i w_j A_{i, j}$. 
+\end{itemize}
+
+
+\subsection{Good practices and sanity checks}
+
+
