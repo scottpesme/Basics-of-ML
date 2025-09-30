@@ -4,7 +4,7 @@
 
 Keep in mind that these are the notations I like to use, but these are obviously personal and others will use different ones!!
 \begin{itemize}
-    \item the notation $x$ will always be used for input data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point. Similarly, $y$ will used for output data, e.g. $y_1, \dots, y_n \in \R$ (or $\in \{0, 1\}$) are output data (or labels).
+    \item the notation $x$ will always be used for input data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point. Similarly, $y$ will used for output data, e.g. $y_1, \dots, y_n \in \R$ (or $\in \{0, 1\}$) are output data (or labels). When $d > n$, we often say that we are in the \textit{over-parametrised setting} (also called \textit{under-determined setting}, which can be confusing!), if $d < n$ we say that we are in the  \textit{under-parametrised setting} (also called, \textit{under-determined setting}).
     \item $X = \begin{pmatrix}
 - & x_1 & - \\
   & \vdots &  \\
@@ -38,7 +38,7 @@ If $f : \R^d \to \R$ is twice differentiable, then its gradient $\nabla f : \R^d
     \item It holds that $X^\top X = \sum_{i=1}^n x_i x_i^\top \in \R^{d \times d}$ and $X X^\top = \big (\langle x_i, x_j \rangle \big )_{1 \leq i, j \leq n} \in \R^{n \times n}$.
     \item Let $L(w) = \frac{1}{2} \sum_{i = 1}^n (y_i - \langle w, x_i \rangle)^2$, then $L(w) = \frac{1}{2} \Vert y - X w \Vert^2$ and $\nabla L(w) = X^\top (X w - y)$.
     \item if $n < d$ ("underparametrised setting), then the matrix $X^\top X$ cannot be invertible, because $\span (x_1, \dots, x_n)$ cannot be equal to $\R^d$. However, if $n \geq d$ and $\span (x_1, \dots, x_n) = \R^d$, then $X^\top X$ is invertible.
-    \item \textit{Rank–nullity theorem:} for $A \in \R^{d \times n}$, it holds that $\rank(A) + \dim \ker(A) = d$.
+    \item \textit{Rank–nullity theorem:} for $A \in \R^{n \times d}$, it holds that $\rank(A) + \dim \ker(A) = d$.
 \end{itemize}
 
 \subsection{Convexity}
@@ -49,6 +49,8 @@ A function $f:\R^d \to \R$ is said to be convex if for all $w_1, w_2 \in \R^d$ a
     \item if $f$ is convex and differentiable, then for all $w_1, w_2 \in \R^d$, it holds that $f(w_2) \geq f(w_1) + \langle \nabla f(w_1), w_2 - w_1 \rangle$ (DO A DRAWING TO VISUALISE THIS!).
     \item if $f$ is convex, then all local minima are global. Therefore, if $\nabla f(w^\star) = 0$, then $w^\star$ is a global minimum. However, keep in mind that there exist convex functions which do not have any minima! (the exponential function for example)
     \item if a function $f$ is convex, then its sublevel sets $\{ w \in \R^d, f(w) \leq c \}$ are convex sets for all $c \in \R$. The converse is false (for example think of $x \mapsto \sqrt{|x|}$ in 1d).
+    \item let $\lambda_1, \lambda_2 \geq 0$, if $f_1$ and $f_2$ are convex functions, then so is $\lambda_1 f_1 + \lambda_2 f_2$.
+    \item $f : \R^n \to \R$ is convex and $A \in \R^{n \times d}$ and $b \in \R^n$, then $w \in \R^d \mapsto f(A w + b)$ is convex too. 
 \end{itemize}
 
 \subsection{Good practices and sanity checks}
