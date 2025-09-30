@@ -58,7 +58,7 @@ A function $f:\R^d \to \R$ is said to be convex if for all $w_1, w_2 \in \R^d$ a
 \paragraph{Math sanity checks} Always check that the math makes sense! 
 
 \begin{itemize}
-    \item  If $f : \R^d \to \R$, then for a vector $w \in \R^d$, $\nabla f(w)$ must belong to $\R^d$! So for example if $f(w) = \frac{1}{2} \Vert x \Vert^2$, then writing that "$\nabla f(w) = \Vert x \Vert$" doesn't make sense. 
+    \item  If $f : \R^d \to \R$, then for a vector $w \in \R^d$, $\nabla f(w)$ must belong to $\R^d$! So for example if $f(w) = \frac{1}{2} \Vert w \Vert^2$, then writing that "$\nabla f(w) = \Vert w \Vert$" doesn't make sense. 
     \item Check that the matrix operations are allowed: if $L(w) = \Vert y - X w \Vert^2$, writing that "$\nabla L(w) = X (X w -y)$" doesn't make sense because the operations $X X$ and $X y$ don't make sense for $n \neq d$ (and also because of the remark right above).
 \end{itemize}
 
