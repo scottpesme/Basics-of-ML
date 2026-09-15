@@ -1,0 +1,568 @@
+\section{Classification}
+\label{sec:classification}
+
+We now move from predicting a real number to predicting a \emph{category}. As
+explained at the beginning of these notes, the general idea does not change: we
+pick a class of functions, measure the quality of a prediction with an appropriate
+loss, and minimise the empirical risk. What changes is the nature of $y$, and
+therefore the loss. Almost everything we built for regression, and in particular
+gradient descent and regularisation, carries over untouched.
+
+\subsection{Binary classification}
+\label{subsec:binary}
+
+We start with two categories. The data is as before,
+\[
+(x_1, y_1), \dots, (x_n, y_n) \in \R^d \times \Y ,
+\]
+but now the label lives in a set of two elements. It will be very convenient to take
+\[
+\Y = \{-1, +1\} ,
+\]
+and we keep this convention throughout the section. Think of $+1$ as ``the email is
+spam'' and $-1$ as ``it is not''.
+
+\paragraph{Linear classifiers.}
+We keep the linear model $\langle w, x \rangle$, but its output is a real number,
+whereas we now need to produce a sign. The natural fix is to threshold it: the
+predictor associated with $w \in \R^d$ is
+\[
+f_w(x) = \sign \big( \langle w, x \rangle \big) \in \{-1, +1\} .
+\]
+The quantity $\langle w, x \rangle$ is called the \emph{score} of $x$. Geometrically,
+the set where the score vanishes,
+\[
+H_w = \{\, x \in \R^d \ : \ \langle w, x \rangle = 0 \,\} ,
+\]
+is a hyperplane through the origin (with the intercept trick below, an arbitrary
+hyperplane), and $f_w$ answers according to the side of $H_w$ on which $x$ falls. The
+hyperplane $H_w$ is called the \emph{decision boundary}, and $w$ is orthogonal to it.
+
+\begin{remark}[The intercept, again]
+Exactly as in \Cref{subsec:ridge} and before it, an affine decision boundary
+$\langle w, x \rangle + b = 0$ is obtained by appending a constant coordinate $1$ to
+each input and an intercept $b$ to the weights. We therefore keep writing $\langle w,
+x\rangle$ without loss of generality.
+\end{remark}
+
+\paragraph{The margin.}
+A key quantity of this section is the product of the label and the score.
+
+\begin{definition}[Margin]
+The \emph{margin} of the predictor $w$ on the sample $(x_i, y_i)$ is
+\[
+m_i(w) \coloneqq y_i \, \langle w, x_i \rangle \ \in \R .
+\]
+\end{definition}
+
+The margin packages the correctness of a prediction into a single signed number:
+\begin{itemize}
+    \item $m_i > 0$ means $\langle w, x_i\rangle$ and $y_i$ have the same sign, i.e.\
+    the point is \emph{correctly classified};
+    \item $m_i < 0$ means the point is \emph{misclassified};
+    \item $|m_i|$ measures how far the point sits from the decision boundary, so a
+    large positive margin means ``correct, and confidently so''.
+\end{itemize}
+This is precisely why the labels $\pm 1$ are pleasant: they let a single expression
+$y_i \langle w, x_i\rangle$ carry both the prediction and whether it was right. Every
+loss we meet below is a function of the margin alone.
+
+\begin{exercise}[$\star$]
+Prove that the $| y_i \langle \frac{w}{\Vert w \Vert}, x_i \rangle |$ corresponds to the distance $\min_{x \in H_w} \Vert x - x_i \Vert$ which corresponds to the distance of $x_i$ to $H_w$.
+\end{exercise}
+
+\begin{remark}[Labels in $\{0, 1\}$]
+Many references, and most software, encode the two classes as $\tilde y \in \{0, 1\}$
+rather than $y \in \{-1, +1\}$. Nothing of substance changes: the two conventions are
+exchanged by the affine bijection
+\[
+\tilde y = \frac{1 + y}{2} \in \{0, 1\} ,
+\qquad\text{equivalently}\qquad
+y = 2 \tilde y - 1 \in \{-1, +1\} .
+\]
+The $\{0,1\}$ convention is the natural one when the label is read as an
+\emph{indicator} of membership in class $1$, which is the form in which most software
+expects it; the $\{-1,+1\}$ convention is the natural one when the label is read as a
+\emph{sign}, which is what makes the margin, and hence this whole section, work. We
+will use $\pm 1$ throughout and translate when useful.
+\end{remark}
+
+\subsection{Choosing a loss: from the ideal one to convex surrogates}
+\label{subsec:class-losses}
+
+\paragraph{What we would like to minimise.}
+The quantity we actually care about is the proportion of mistakes. This corresponds
+to the \emph{$0/1$ loss}, which we write directly as a function of the margin $m$:
+\[
+\ell_{0/1}(m) = \mathbf{1}\{ m \leq 0 \}
+= \begin{cases} 1 & \text{if the point is misclassified,} \\ 0 & \text{otherwise,}\end{cases}
+\]
+whose empirical risk
+\[
+L_{0/1}(w) = \frac{1}{n} \sum_{i=1}^n \mathbf{1}\big\{ y_i \langle w, x_i \rangle \leq 0 \big\}
+\]
+is exactly the \emph{misclassification rate} on the training set. Unfortunately it is hopeless to
+minimise directly. Since it is piecewise constant, we cannot use gradient methods, its gradient is zero wherever it is defined. Gradient descent, started anywhere, does not move.
+Minimising it is in fact NP-hard in general.
+
+\paragraph{Convex surrogates.}
+The standard remedy is to replace $\ell_{0/1}$ by a \emph{surrogate loss}: a function
+$\ell(m)$ of the margin that is convex and dominates the $0/1$ loss,
+possibly after multiplication by a positive constant, so that making it small forces
+the misclassification rate to be small too. Here are the classical choices.
+\begin{itemize}
+    \item \emph{Square loss}, $\ell(m) = (1 - m)^2$. This is nothing but least squares
+    applied to the labels $\pm 1$, and it is the one loss of the list with a closed
+    form. Its defect is that it is increasing again for $m > 1$: it \emph{penalises
+    points that are classified too well}, which is not what we want.
+    \item \emph{Hinge loss}, $\ell(m) = \max(0, 1 - m)$. It asks each point to be
+    correctly classified with a margin of at least $1$, and is perfectly happy beyond
+    that. Combined with an $\ell_2$ penalty it gives the \emph{support vector
+    machine}. It is convex but not differentiable at $m = 1$.
+    \item \emph{Logistic loss}, $\ell(m) = \ln\big(1 + e^{-m}\big)$. Convex, smooth,
+    strictly decreasing, and never exactly zero. This is the one we develop below.
+    \item \emph{Exponential loss}, $\ell(m) = e^{-m}$. Convex and smooth, but it
+    penalises misclassified points enormously, which makes it sensitive to outliers.
+    It is the loss underlying boosting.
+\end{itemize}
+All of them are decreasing functions of the margin (but the square loss only for $m \leq 1$,
+which is precisely its problem), and this is the essential point: they all push each
+$m_i$ to be as large as possible, that is, they all reward classifying correctly and
+confidently.
+
+
+\subsection{Logistic regression}
+\label{subsec:logistic}
+
+\paragraph{Why this surrogate and not another.}
+We focus here on the 
+\emph{logistic loss}
+\[
+\ell(m) = \ln\big( 1 + e^{-m} \big).
+\]
+This is by far the most used surrogate in practice and it is what essentially every classification
+neural network is trained on. It combines all the nice following properties:
+\begin{itemize}
+    \item It is \emph{convex}, so the empirical risk has no spurious local minima.
+    it is the very point of replacing $\ell_{0/1}$.
+    \item It is \emph{strictly decreasing}, so a point is never penalised for being
+    classified \emph{too} well. 
+    \item It grows only \emph{linearly} as $m \to -\infty$, since $\ln(1 + e^{-m}) =
+    -m + \ln(1 + e^{m}) \approx -m$. A single badly misclassified point therefore
+    contributes a bounded slope and cannot hijack the whole objective. The exponential
+    loss fails this badly: $e^{-m}$ blows up, and one outlier can dominate the sum.
+\end{itemize}
+Note also its behaviour on the other side:
+$\ell(m) \to 0$ as $m \to +\infty$ but $\ell(m) > 0$ for every finite $m$. This means that contrary to the square loss, $\ell$ does not have a finite minimiser over $\R$.
+
+\paragraph{The logistic risk.}
+Plugging the linear score into the empirical risk with the logistic loss, learning
+amounts to minimising over $w \in \R^d$ the function
+\[
+L(w) = \frac{1}{n} \sum_{i=1}^n \ell\big( m_i(w) \big)
+= \frac{1}{n} \sum_{i=1}^n \ln\Big( 1 + \exp\big( - y_i \langle w, x_i \rangle \big) \Big) .
+\]
+This is the objective of \emph{logistic regression}, and it is the one we minimise for
+the rest of this section. Two features of it are already visible from the loss alone.
+Being an average of convex functions of $w$, it is convex, so we are again in the
+comfortable situation of \Cref{sec:least-squares}. But every term is strictly positive,
+so $L(w) > 0$ for every $w$, and the infimum of $L$ may not be attained.
+
+\paragraph{A convenient notation.}
+Differentiating $\ell$ produces the same expression over and over, so we give it a
+name. Let
+\[
+\sigma(m) = \frac{1}{1 + e^{-m}} , \qquad m \in \R ,
+\]
+called the \emph{sigmoid} (or logistic) function. It increases from $0$ to $1$, with
+$\sigma(0) = 1/2$, and satisfies the two identities
+\[
+\sigma(-m) = 1 - \sigma(m) ,
+\qquad
+\sigma'(m) = \sigma(m)\big(1 - \sigma(m)\big) = \sigma(m)\, \sigma(-m).
+\]
+It is related to the loss by $\ell(m) = -\ln \sigma(m)$, and:
+\[
+\ell'(m) = - \sigma(-m) \ \in \ (-1, 0) .
+\]
+So $\sigma(-m)$ is exactly the \emph{steepness} of the logistic loss at margin $m$:
+close to $1$ when $m \ll 0$, close to $0$ when $m \gg 0$.
+
+
+
+
+\begin{remark}[The same objective with $\{0,1\}$ labels]
+With the convention $\tilde y \in \{0,1\}$ introduced in \Cref{subsec:binary}, and
+writing $\sigma_i = \sigma(\langle w, x_i\rangle)$ for the predicted probability of
+class $1$, the formula found in textbooks and libraries is
+\[
+L(w) = - \frac{1}{n} \sum_{i=1}^n \Big[ \tilde y_i \ln \sigma_i + (1 - \tilde y_i) \ln (1 - \sigma_i) \Big] ,
+\]
+usually called the \emph{binary cross-entropy}. It is the logistic risk in
+disguise. Since $\tilde y_i$ is either $0$ or $1$, the bracket is a switch: it keeps
+$\ln \sigma_i = \ln \sigma(\langle w, x_i \rangle)$ when $\tilde y_i = 1$, that is
+when $y_i = +1$, and it keeps $\ln(1 - \sigma_i) = \ln \sigma(-\langle w, x_i
+\rangle)$ when $\tilde y_i = 0$, that is when $y_i = -1$. In both cases what survives
+is $\ln \sigma\big( y_i \langle w, x_i \rangle \big) = \ln \sigma(m_i)$, and the
+minus sign in front of the sum turns it into $\ell(m_i) = - \ln \sigma(m_i)$. So this
+is exactly the objective above. 
+\end{remark}
+
+\begin{exercise}[$\star$]
+Prove the last claim: substituting $\tilde y_i = (1 + y_i)/2$ and $\sigma_i =
+\sigma(\langle w, x_i\rangle)$ into the cross-entropy formula gives back
+$\frac1n \sum_i \ln(1 + e^{-y_i \langle w, x_i\rangle})$.
+\end{exercise}
+
+\paragraph{Gradient and Hessian.}
+Since we will have to minimise $L$ by an iterative method, we need its gradient. Write
+$m_i = m_i(w) = y_i \langle w, x_i \rangle$ for readability.
+
+\begin{prop}[Derivatives of the logistic risk]
+\label{prop:logistic-grad}
+The function $L$ is differentiable on $\R^d$, with
+\[
+\nabla L(w) = - \frac{1}{n} \sum_{i=1}^n \sigma(-m_i) \, y_i \, x_i
+= - \frac{1}{n} \sum_{i=1}^n \frac{y_i \, x_i}{1 + e^{y_i \langle x_i, w \rangle}} ,
+\]
+and
+\[
+\nabla^2 L(w) = \frac{1}{n} \sum_{i=1}^n \sigma(m_i)\,\sigma(-m_i)\, x_i x_i^\top
+= \frac{1}{n} X^\top D_w X \ \succeq \ 0 ,
+\]
+where $D_w = \diag\big( \sigma(m_i) \sigma(-m_i) \big)_{1 \leq i \leq n} \in \R^{n
+\times n}$ is diagonal with positive entries.
+In particular $L$ is convex. If moreover $\rank(X) = d$, then $\nabla^2 L(w) \succ 0$
+for every $w$ and $L$ is strictly convex.
+\end{prop}
+
+\begin{proof}
+The scalar function $\ell(m) = \ln(1 + e^{-m})$ has derivative
+\[
+\ell'(m) = \frac{-e^{-m}}{1 + e^{-m}} = \frac{-1}{1 + e^{m}} = -\sigma(-m) ,
+\]
+and the chain rule applied to $w \mapsto m_i(w) = y_i \langle w, x_i\rangle$, whose
+gradient is $y_i x_i$, gives the announced $\nabla L$. Differentiating once more,
+\[
+\nabla_w \big[ \sigma(-m_i) \big] = \sigma'(-m_i) \cdot (-y_i x_i)
+= - \sigma(-m_i)\sigma(m_i) \, y_i x_i ,
+\]
+so that $\nabla^2 L(w) = \frac1n \sum_i \sigma(m_i)\sigma(-m_i) \, y_i^2 \, x_i
+x_i^\top$, and $y_i^2 = 1$ because $y_i \in \{-1,+1\}$. Each coefficient
+$\sigma(m_i)\sigma(-m_i)$ is $> 0$, so for any $u \in \R^d$,
+\[
+u^\top \nabla^2 L(w) u = \frac1n \sum_{i=1}^n \sigma(m_i)\sigma(-m_i) \, \langle u, x_i \rangle^2 \geq 0 ,
+\]
+which is the convexity. If $\rank(X) = d$ then $\ker(X) = \{0\}$, so $u \neq 0$ forces
+$\langle u, x_i \rangle \neq 0$ for at least one $i$, and the sum is $> 0$.
+\end{proof}
+
+\begin{remark}[Reading the gradient]
+The formula for $\nabla L$ is worth staring at. A gradient \emph{descent} step moves
+$w$ along $-\nabla L(w)$, that is, along
+\[
+\frac{1}{n} \sum_{i=1}^n \underbrace{\sigma(-m_i)}_{\text{weight} \, \in \, (0,1)} \ \underbrace{y_i x_i}_{\text{direction}} .
+\]
+Each sample pushes $w$ in the direction $y_i x_i$, which is exactly the direction that
+increases its own margin $m_i = y_i \langle w, x_i \rangle$: every point asks to be
+classified better. What differs between points is the weight they are given, and that
+weight is the steepness $\sigma(-m_i) = -\ell'(m_i)$ met above. Badly classified points
+($m_i \ll 0$) carry a weight close to $1$ and dominate the step; comfortably classified
+points ($m_i \gg 0$) carry a weight close to $0$ and are almost ignored. Logistic
+regression therefore spends nearly all its effort on the points near the decision
+boundary or on the wrong side of it, and essentially none on the easy ones.
+\end{remark}
+
+\paragraph{No closed form.}
+Here is the essential practical difference with least squares. There, setting $\nabla
+L(w) = 0$ gave the \emph{linear} system $X^\top X w = X^\top y$, which we could solve
+in closed form. Here, $\nabla L(w) = 0$ reads
+\[
+\sum_{i=1}^n \frac{y_i \, x_i}{1 + e^{y_i \langle w, x_i \rangle}} = 0 ,
+\]
+in which the unknown $w$ appears inside an exponential. This is a system of $d$
+transcendental equations, and it has \emph{no closed-form solution}: there is no
+analogue of the normal equations, and no formula such as $(X^\top X)^{-1} X^\top y$ to
+write down. We are therefore in the second of the two situations listed at the
+beginning of \Cref{subsec:gd}, and we do the only thing we can: we minimise $L$
+\emph{iteratively}. Concretely,
+\[
+w_{t+1} = w_t - \gamma\, \nabla L(w_t)
+\qquad\text{or}\qquad
+w_{t+1} = w_t - \gamma\, \nabla \ell_{i_t}(w_t) ,
+\]
+that is, exactly the gradient descent and stochastic gradient descent of
+\Cref{subsec:gd}, with the gradient of \Cref{prop:logistic-grad} plugged in. Since $L$
+is convex and smooth, gradient descent with a small enough step size will minimise the training loss.
+
+\subsection{Separable and non-separable data}
+\label{subsec:separable}
+
+\begin{definition}[Linearly separable data]
+The training set is said to be \emph{linearly separable} if there exists $w \in \R^d$ such that
+\[
+y_i \langle w, x_i \rangle > 0 \qquad \text{for every } i = 1, \dots, n ,
+\]
+that is, if some hyperplane classifies every training point correctly. Otherwise it is
+\emph{non-separable}.
+\end{definition}
+
+Whether or not the data is separable completely changes the behaviour of $L$.
+
+\paragraph{Separable data: the minimum is at infinity.}
+
+\begin{prop}[No minimiser in the separable case]
+\label{prop:sep-no-min}
+Suppose the data is linearly separable. Then
+\[
+\inf_{w \in \R^d} L(w) = 0 ,
+\]
+but the infimum is \emph{not attained}: $L(w) > 0$ for every $w \in \R^d$. Moreover
+every minimising sequence $(w_k)$ (i.e. such that $L(w_k) \to 0$) satisfies $\Vert w_k \Vert \to \infty$.
+\end{prop}
+
+\begin{proof}
+Each term $\ln(1 + e^{-m})$ is strictly positive for every finite $m$, so $L(w) > 0$
+for every $w$, and the infimum cannot be attained at any finite point.
+
+Let $u$ be a separating direction and set $\rho \coloneqq \min_i y_i \langle u, x_i
+\rangle > 0$, the smallest margin it achieves. Walking along the ray
+$t u$ with $t > 0$, every margin is multiplied by $t$:
+\[
+L(t u) = \frac1n \sum_{i=1}^n \ln\big( 1 + e^{-t\, y_i \langle u, x_i\rangle} \big)
+\ \leq \ \ln\big( 1 + e^{-t \rho} \big) \ \xrightarrow[t \to +\infty]{} \ 0 ,
+\]
+so $\inf L = 0$. Finally, if some minimising sequence had a bounded subsequence, it
+would have a convergent one, $w_{k_j} \to \bar w$, and continuity of $L$ would give
+$L(\bar w) = 0$, contradicting $L > 0$. Hence $\Vert w_k \Vert \to \infty$.
+\end{proof}
+
+The picture to keep in mind is this: once a separating direction $u$ is found, scaling
+it up multiplies all the margins by $t$ without ever changing a single prediction,
+since $\sign(\langle t u, x\rangle) = \sign(\langle u, x \rangle)$. The classifier is
+already perfect, but the loss keeps rewarding more confidence, and it can always buy
+more by making $\Vert w \Vert$ larger. So the optimisation problem has no solution:
+\emph{the minimum sits at infinity}, and gradient descent, faithfully, sends $\Vert
+w_t \Vert$ to infinity. The training loss decreases to $0$ while the training accuracy has
+been $100\%$ for a long time.
+
+\begin{remark}[Which direction does it diverge in?]
+If $\Vert w_t \Vert \to \infty$, the only thing that still matters is the
+\emph{direction} $w_t / \Vert w_t \Vert$, since that is what determines the
+predictions. And the direction does converge. This is the exact analogue, for the
+logistic loss, of the implicit bias of gradient descent we proved in
+\Cref{subsec:gd} for least squares: the loss alone does not pick a separating
+hyperplane, but the algorithm does. We record the result without proof.
+\end{remark}
+
+\begin{fact}[Implicit bias of GD on separable data, admitted]
+On linearly separable data, gradient descent on the logistic loss with a small enough
+constant step size satisfies $\Vert w_t \Vert \to \infty$,
+while
+\[
+\frac{w_t}{\Vert w_t \Vert} \ \xrightarrow[t \to \infty]{} \ \frac{\hat u}{\Vert \hat u \Vert} ,
+\qquad
+\hat u \in \argmax_{\Vert u \Vert \leq 1} \ \min_{1 \leq i \leq n} \ y_i \langle u, x_i \rangle .
+\]
+That is, the direction converges to the \emph{maximum-margin} separator, the one
+staying as far as possible from the closest training points. This is the solution of
+the hard-margin support vector machine, obtained here for free, without ever writing
+that problem down.
+\end{fact}
+
+\paragraph{Non-separable data: a minimum exists.}
+When the two classes overlap, no $w$ can classify everything correctly, the loss can
+no longer be driven to $0$. 
+
+\begin{prop}[Existence of a minimiser]
+\label{prop:nonsep-min}
+Suppose that for every $w \neq 0$ there exists a datapoint such that  $y_i \langle w, x_i
+\rangle < 0$, i.e.\ that every candidate direction \emph{strictly} misclassifies at
+least one point. Then $L$ is coercive and attains its minimum.
+\end{prop}
+
+\begin{proof}
+The function $h(u) \coloneqq \min_i y_i \langle u, x_i \rangle$ is continuous (a
+minimum of finitely many linear functions) and, by assumption, $h(u) < 0$ on the unit
+sphere, which is compact. Hence $\rho \coloneqq - \max_{\Vert u \Vert = 1} h(u) > 0$:
+every unit direction misclassifies some point with margin at most $-\rho$.
+
+Now take any $w \neq 0$ and write $w = t u$ with $t = \Vert w \Vert$ and $\Vert u
+\Vert = 1$. Picking an index $i$ with $y_i \langle u, x_i \rangle \leq -\rho$ and
+keeping only that term,
+\[
+L(w) \ \geq \ \frac1n \ln\big( 1 + e^{t \rho} \big) \ \geq \ \frac{t \rho}{n}
+\ \xrightarrow[\ \Vert w \Vert \to \infty\ ]{} \ \infty ,
+\]
+so $L$ is coercive. A continuous coercive function attains its minimum. 
+\end{proof}
+
+
+\paragraph{Weight regularisation.}
+Just as ridge regression cured the non-uniqueness of least squares in the
+over-parametrised regime, adding an $\ell_2$ penalty cures the ``minimum at infinity''
+problem here. Consider
+\[
+L_\lambda(w) = \frac{1}{n} \sum_{i=1}^n \ln\big( 1 + e^{- y_i \langle w, x_i \rangle} \big)
+\ + \ \frac{\lambda}{2} \Vert w \Vert^2 , \qquad \lambda > 0 .
+\]
+Being a sum of a convex function and a strictly convex one, $L_\lambda$ is strictly
+convex; and $L_\lambda(w) \geq \frac{\lambda}{2}\Vert w \Vert^2 \to \infty$, so it is
+coercive. By the argument used for ridge in \Cref{subsec:ridge}, it therefore admits a
+\emph{unique} minimiser, whatever the data, separable or not, and whatever the
+relative sizes of $n$ and $d$. The penalty is precisely what forbids the escape to
+infinity: buying more confidence now costs $\frac{\lambda}{2}\Vert w \Vert^2$, and at
+some finite point the purchase is no longer worth it. As before, there is still no
+closed form, and one minimises $L_\lambda$ by gradient descent, whose gradient is
+$\nabla L(w) + \lambda w$.
+
+
+\subsection{Multiclass classification}
+\label{subsec:multiclass}
+
+We finally treat $K \geq 2$ categories, so that
+\[
+y_i \in \{1, 2, \dots, K\} ,
+\]
+for instance $K = 10$ when recognising which digit is written in an image.
+
+\paragraph{One score per class.}
+A single score is no longer enough: we compute \emph{one score per class}, using one
+weight vector per class. The parameter is now a collection
+\[
+W = (w_1, \dots, w_K), \qquad w_k \in \R^d ,
+\]
+which we may equally see as a matrix $W \in \R^{d \times K}$, and the scores of an
+input $x$ are the $K$ numbers $\langle w_1, x \rangle, \dots, \langle w_K, x \rangle$.
+The prediction is the class with the largest score,
+\[
+f_W(x) = \argmax_{1 \leq k \leq K} \ \langle w_k, x \rangle .
+\]
+
+\paragraph{The multiclass margin.}
+The reasoning of \Cref{subsec:class-losses} repeats verbatim, and again it is the
+$0/1$ loss that we would like to minimise and cannot. Writing $s_k = \langle w_k, x_i
+\rangle$ for the scores of the sample $i$, the prediction is correct exactly when the
+true class wins, that is, when $s_{y_i} > s_k$ for every $k \neq y_i$, equivalently
+when
+\[
+\max_{k \neq y_i} \ \big( s_k - s_{y_i} \big) \ < \ 0 .
+\]
+This quantity plays the role that $-m_i$ played in the binary case: it is negative
+exactly when the point is correctly classified, and the $0/1$ loss is the indicator
+that it is non-negative. It is once more non-convex and flat, so once more we look for
+a convex surrogate.
+
+\paragraph{Softening the maximum.}
+The obstruction is the maximum, which is convex but not smooth. The standard fix is to
+replace it by the \emph{log-sum-exp} function, which is a smooth approximation of the
+maximum: for any reals $a_1, \dots, a_K$,
+\[
+\max_{k} a_k \ \leq \ \ln \sum_{k=1}^K e^{a_k} \ \leq \ \max_{k} a_k + \ln K .
+\]
+The left inequality holds because the sum dominates its largest term, the right one
+because the sum is at most $K$ times its largest term. So log-sum-exp is the maximum,
+up to an additive constant of at most $\ln K$, and it is convex and $C^\infty$.
+Applying it to $a_k = s_k - s_{y_i}$ (which now includes the index $k = y_i$,
+contributing $e^0 = 1$) gives the loss
+\[
+\ell_i(W) = \ln \sum_{k=1}^K \exp\big( s_k - s_{y_i} \big)
+= \ln \Big( 1 + \sum_{k \neq y_i} \exp\big( s_k - s_{y_i} \big) \Big) ,
+\]
+and the empirical risk, after factoring $e^{-s_{y_i}}$ out of the sum:
+\[
+\boxed{\
+L(W) = \frac{1}{n} \sum_{i=1}^n \left[ - \langle w_{y_i}, x_i \rangle
++ \ln \sum_{k=1}^K \exp\big( \langle w_k, x_i \rangle \big) \right] .
+\ }
+\]
+This is the \emph{cross-entropy} (or \emph{softmax}) loss. The first term pushes up the
+score of the correct class, the second pushes down the scores of all classes; their
+balance is what makes the correct class win. The middle expression makes the kinship
+with the binary case plain: it is $\ln(1 + \sum_{k \neq y} e^{s_k - s_y})$, against
+$\ln(1 + e^{-m})$ for two classes. This is by some distance the most used loss in
+modern machine learning: it is the objective at the end of essentially every
+classification network. Evaluating it on a computer requires a little care, since the
+exponentials overflow easily; see \Cref{subsec:numerics}.
+
+\paragraph{The softmax weights.}
+Differentiating log-sum-exp produces normalised exponentials, which we name once and
+for all:
+\[
+p_k(x) \coloneqq \frac{\exp\big( \langle w_k, x \rangle \big)}{\sum_{k'=1}^K \exp\big( \langle w_{k'}, x \rangle \big)} ,
+\qquad k = 1, \dots, K ,
+\]
+called the \emph{softmax weights}. They are positive, they sum to $1$, and the largest
+score gets the largest weight. They are the multiclass analogue of the steepness
+$\sigma(-m)$ of the binary case, and indeed for $K = 2$ they reduce to it.
+
+\begin{prop}[Gradient of the cross-entropy]
+\label{prop:softmax-grad}
+For each $k \in \{1, \dots, K\}$,
+\[
+\nabla_{w_k} L(W) = \frac{1}{n} \sum_{i=1}^n \Big( p_k(x_i) - \mathbf{1}\{ y_i = k \} \Big) \, x_i .
+\]
+Moreover $L$ is convex in $W$.
+\end{prop}
+
+The factor $p_k(x_i) - \mathbf{1}\{y_i = k\}$ compares the weight the
+softmax currently puts on class $k$ with the weight we would like it to put there,
+namely $1$ for the true class and $0$ for all the others. If the sample is already
+classified with a comfortable margin, the softmax weights are already close to that
+target, the factor is nearly zero and the sample contributes almost nothing to the
+step; if it is misclassified, the factor is close to $\pm 1$ and the sample pushes
+hard. This is the exact multiclass counterpart of the reading we gave of the binary
+gradient. Exactly as in the binary case, too, setting all the $\nabla_{w_k} L$ to zero
+gives a system of transcendental equations with no closed-form solution, and we
+minimise by gradient descent.
+
+\begin{exercise}[$\star\star$]
+Prove \Cref{prop:softmax-grad}. Start by showing that the gradient of the second term,
+$\nabla_{w_k} \ln \sum_{k'} e^{\langle w_{k'}, x\rangle}$, is equal to $p_k(x)\, x$,
+and then differentiate the first term, which is nonzero only when $k = y_i$.
+\end{exercise}
+
+\begin{remark}[The parametrisation is redundant]
+Adding the same vector $v \in \R^d$ to \emph{every} $w_k$ leaves the softmax
+unchanged, since $e^{\langle w_k + v, x\rangle} = e^{\langle v, x\rangle} e^{\langle
+w_k, x\rangle}$ and the common factor cancels in the ratio. So $L(W)$ is constant
+along all such directions, and a minimiser is \emph{never} unique: as in the
+over-parametrised least-squares problem of \Cref{subsec:overparam}, the set of
+minimisers contains a whole subspace of directions the loss cannot see. One fixes this
+either by regularising (adding $\frac{\lambda}{2}\sum_k \Vert w_k \Vert^2$, which
+selects the representative of smallest norm) or by fixing $w_K = 0$ by convention.
+\end{remark}
+
+\paragraph{Recovering binary classification.}
+Take $K = 2$, with class $1$ standing for the label $y = +1$ and class $2$ for $y =
+-1$. The middle form of the loss makes the computation immediate: with only one rival
+class, the inner sum has a single term, and the loss of a sample of class $1$ is
+\[
+\ell_i = \ln\Big( 1 + e^{\,s_2 - s_1} \Big)
+= \ln\Big( 1 + e^{- \langle w_1 - w_2, \, x_i \rangle} \Big) ,
+\]
+while for a sample of class $2$ the roles of the indices are swapped and
+\[
+\ell_i = \ln\Big( 1 + e^{\,s_1 - s_2} \Big)
+= \ln\Big( 1 + e^{+ \langle w_1 - w_2, \, x_i \rangle} \Big) .
+\]
+The two weight vectors therefore enter only through their \emph{difference}, which is
+exactly the redundancy of the previous remark: the loss is constant along the
+$d$-dimensional subspace $\{(v, v) : v \in \R^d\}$ of the parameter space $\R^{2d}$,
+and what survives is the $d$-dimensional quotient, coordinatised by $w_1 - w_2$.
+Setting
+\[
+w \coloneqq w_1 - w_2 \in \R^d ,
+\]
+both cases become the single expression $\ln(1 + e^{-y_i \langle w, x_i\rangle})$, so
+the multiclass cross-entropy with $K = 2$ \emph{is} the logistic risk of
+\Cref{subsec:logistic}, written in the variable $w = w_1 - w_2$. Binary logistic
+regression is thus not a separate method but the special case $K = 2$ of softmax
+regression, and the $\pm 1$ margin formulation is what you obtain after removing the
+redundant direction.
+
+\begin{exercise}[$\star$]
+Check the analogous statement for the predictions rather than the loss: verify that
+$\argmax_{k \in \{1,2\}} \langle w_k, x\rangle = 1$ if and only if $\langle w, x
+\rangle > 0$, so that the multiclass rule reduces to $\sign(\langle w, x\rangle)$.
+\end{exercise}

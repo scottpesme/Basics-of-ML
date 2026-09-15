@@ -1,0 +1,528 @@
+\section{Unsupervised learning}
+\label{sec:unsupervised}
+
+Everything so far has been supervised: every input $x_i$ came with a label $y_i$, and
+the whole machinery was built to predict $y$ from $x$. We now remove the labels.
+
+\subsection{The setup, and what changes without labels}
+\label{subsec:unsup-setup}
+
+The data is a plain collection of points
+\[
+x_1, \dots, x_n \in \R^d ,
+\]
+with nothing attached to them, and we stack them as always into the design matrix
+$X \in \R^{n \times d}$ whose $i$-th row is $x_i$. There is no $y$, and therefore
+no function $f$ to fit and no prediction to be scored. The question becomes the vaguer
+one of \emph{finding structure}: is the cloud of points really spread over all $d$
+directions, or does it essentially live in a much smaller subspace? Does it break up
+into a few well-separated groups?
+
+\paragraph{What we keep: one recipe, two instances.}
+The good news is that the main ideas of these notes stay mostly intact. We still
+write down a class of simplified descriptions of the data, still measure quality by a
+squared error, and still minimise. The unifying statement, which is the thread running
+through this whole section, is that both methods we study solve
+\[
+\ \min_{\hat X \,\in\, \mathcal{C}} \ \big\Vert X - \hat X \big\Vert_F^2 
+\]
+for two different choices of the set $\mathcal{C}$ of allowed reconstructions
+$\hat X \in \R^{n \times d}$. In both cases $\hat X$ is a \emph{simplified stand-in}
+for the data: row $i$ of $\hat X$ is what we keep of the point $x_i$, and the objective
+asks that we lose as little as possible.
+\begin{itemize}
+    \item \emph{Principal component analysis} takes $\mathcal{C}$ to be the matrices
+    whose rows all lie in one $K$-dimensional linear subspace of $\R^d$. Each point is
+    replaced by its projection onto a common subspace: the data is compressed in
+    \emph{direction}.
+    \item \emph{$K$-means} takes $\mathcal{C}$ to be the matrices whose rows take at
+    most $K$ distinct values. Each point is replaced by the centroid of its group: the
+    data is compressed in \emph{identity}, since after the reconstruction all we
+    remember of $x_i$ is which of $K$ representatives it was closest to.
+\end{itemize}
+The parameter $K$ measures, in both cases, how much we allow ourselves to keep, and it
+is a hyperparameter we must pick: it is not fitted by the
+optimiser.
+
+\begin{remark}[The Frobenius norm]
+\label{rem:frobenius}
+The norm above is the \emph{Frobenius} norm, which is nothing more exotic than the
+Euclidean norm of a matrix read as a long vector:
+\[
+\Vert A \Vert_F^2 \ \coloneqq \ \sum_{i,j} A_{i,j}^2 \ = \ \tr(A^\top A) .
+\]
+When the rows of $A$ are $a_1, \dots, a_n$ this is $\sum_{i=1}^n \Vert a_i \Vert^2$, so
+$\Vert X - \hat X \Vert_F^2 = \sum_{i=1}^n \Vert x_i - \hat x_i \Vert^2$ really is the
+total squared reconstruction error, summed over the samples. We use throughout the
+\emph{cyclicity of the trace}, $\tr(AB) = \tr(BA)$ whenever both products are defined;
+see \Cref{sec:cheat-linalg}.
+\end{remark}
+
+\begin{remark}[A third index]
+\label{rem:third-index}
+Both methods need to count \emph{groups} (clusters, or directions kept), a third kind
+of index alongside the samples $i$ and the coordinates $j$ used throughout these notes. We
+use $k$ for it, ranging over $1, \dots, K$, exactly as $k$ already ranged over the
+classes in \Cref{sec:classification}. So $x_i$ is a sample, $x_{i,j}$ one of its
+coordinates, and $\mu_k$ or $v_k$ the $k$-th centroid or direction.
+\end{remark}
+
+
+\subsection{Principal component analysis}
+\label{subsec:pca}
+
+\paragraph{Centring.}
+PCA is about \emph{directions of variation}, so the position of the cloud is
+irrelevant and must be removed first. Throughout this subsection we assume the data has
+been \emph{centred}: writing $\bar x = \tfrac1n \sum_{i=1}^n x_i$ for the empirical
+mean, we replace each $x_i$ by $x_i - \bar x$, so that
+\[
+\frac{1}{n} \sum_{i=1}^n x_i = 0 ,
+\]
+and we keep calling the resulting matrix $X$. This is an important step: without it
+the first principal direction is dominated by the direction of $\bar x$, which says
+where the data sits rather than how it varies. Whether one should further
+\emph{standardise} the coordinates is a separate and more debatable question, discussed
+at the end of the subsection.
+
+\paragraph{Projecting onto a subspace.}
+We look for a linear subspace $S \subseteq \R^d$ of dimension $K \leq d$ on which to
+project the data. Describe it by an orthonormal basis $v_1, \dots, v_K$, that is,
+$\langle v_k, v_{k'} \rangle = \delta_{k,k'}$, and gather the basis into a matrix
+\[
+V = \big( v_1 \mid \dots \mid v_K \big) \in \R^{d \times K} ,
+\qquad \text{so that} \qquad
+V^\top V = I_K ,
+\]
+the last identity being exactly the statement that the columns are orthonormal.
+Two matrices are then worth reading carefully, because everything follows from them.
+
+The matrix $XV \in \R^{n \times K}$ collects the \emph{coordinates of the data in the
+new basis}:
+\[
+XV = \begin{pmatrix}
+\langle x_1, v_1 \rangle & \dots & \langle x_1, v_K \rangle \\
+\vdots & & \vdots \\
+\langle x_n, v_1 \rangle & \dots & \langle x_n, v_K \rangle
+\end{pmatrix} .
+\]
+Its $i$-th row is the compressed version of $x_i$: $K$ numbers instead of $d$. These
+are the \emph{scores}, or \emph{principal components}, of the data.
+
+The matrix $X V V^\top \in \R^{n \times d}$ puts them back into the original space:
+\[
+X V V^\top = \begin{pmatrix}
+- & \sum_{k=1}^K \langle x_1, v_k \rangle\, v_k & - \\
+  & \vdots & \\
+- & \sum_{k=1}^K \langle x_n, v_k \rangle\, v_k & -
+\end{pmatrix} ,
+\]
+whose $i$-th row is the orthogonal projection of $x_i$ onto $S$. So $P_V \coloneqq
+V V^\top \in \R^{d \times d}$ is the orthogonal projector onto $S$, and $\hat X = X
+V V^\top$ is precisely the reconstruction of \Cref{subsec:unsup-setup}, with
+$\mathcal{C}$ the set of matrices whose rows lie in a common $K$-dimensional subspace.
+
+\begin{exercise}[$\star$]
+Check that $P_V = VV^\top$ satisfies $P_V^\top = P_V$ and $P_V^2 = P_V$, so it is
+indeed an orthogonal projector, and that $\rank(P_V) = K$. Where is $V^\top V = I_K$
+used? Note that $V V^\top \neq I_d$ unless $K = d$: the order of the product matters
+enormously.
+\end{exercise}
+
+\paragraph{The objective, and its two readings.}
+PCA chooses the subspace minimising the reconstruction error:
+\[
+\min_{V \in \R^{d \times K}, \ V^\top V = I_K} \ \big\Vert X - X V V^\top \big\Vert_F^2 .
+\]
+The following computation, which is the heart of the matter, turns this into an
+eigenvalue problem.
+
+\begin{prop}[Reconstruction error and retained variance]
+\label{prop:pca-two-readings}
+For every $V \in \R^{d \times K}$ with $V^\top V = I_K$,
+\[
+\big\Vert X - X V V^\top \big\Vert_F^2
+\ = \ \Vert X \Vert_F^2 \ - \ \tr\big( V^\top X^\top X\, V \big) .
+\]
+Since $\Vert X \Vert_F^2$ does not depend on $V$, \emph{minimising the reconstruction
+error is the same problem as maximising} $\tr(V^\top X^\top X V)$.
+\end{prop}
+
+\begin{proof}
+Expand the square using $\Vert A \Vert_F^2 = \tr(A^\top A)$:
+\[
+\big\Vert X - X V V^\top \big\Vert_F^2
+= \tr(X^\top X) - 2\, \tr\big( X^\top X V V^\top \big)
++ \tr\big( V V^\top X^\top X V V^\top \big) ,
+\]
+where the cross terms were merged using $\tr(A^\top) = \tr(A)$. For the last term,
+cyclicity of the trace moves the leading $V$ to the end,
+\[
+\tr\big( V V^\top X^\top X V V^\top \big) = \tr\big( V^\top X^\top X V \, V^\top V \big)
+= \tr\big( V^\top X^\top X V \big) ,
+\]
+using $V^\top V = I_K$; and the same cyclicity gives $\tr(X^\top X V V^\top) =
+\tr(V^\top X^\top X V)$. The two therefore combine into $-2 + 1 = -1$ times
+$\tr(V^\top X^\top X V)$, which is the claim.
+\end{proof}
+
+The quantity being maximised has a direct statistical meaning. Since the data is
+centred,
+\[
+\tr\big( V^\top X^\top X V \big) = \sum_{k=1}^K v_k^\top X^\top X\, v_k
+= \sum_{k=1}^K \sum_{i=1}^n \langle x_i, v_k \rangle^2
+= \big\Vert X V \big\Vert_F^2 ,
+\]
+which is $n$ times the total \emph{empirical variance of the projected data}. So the
+two natural things one might have asked for turn out to be the same request:
+
+\begin{center}
+\begin{tabular}{@{}c@{\quad}c@{\quad}c@{}}
+\emph{keep the subspace} & $\Longleftrightarrow$ & \emph{keep the subspace} \\
+\emph{losing the least information} & & \emph{carrying the most variance.}
+\end{tabular}
+\end{center}
+
+\noindent
+This is the first thing to remember about PCA. It is also why the empirical covariance
+matrix
+\[
+\hat \Sigma \ \coloneqq \ \frac{1}{n} X^\top X \ \in \R^{d \times d}
+\]
+is the object that decides everything: it is symmetric positive semi-definite (see
+\Cref{sec:cheat-convexity}), and the problem is now to maximise $\tr(V^\top \hat\Sigma
+V)$ over orthonormal $V$.
+
+\paragraph{Solving it.}
+Start with a single direction, where the answer is the classical Rayleigh quotient
+bound.
+
+\begin{lemma}[One direction]
+\label{lem:rayleigh}
+Let $A \in \R^{d \times d}$ be symmetric with eigenvalues $\lambda_1 \geq \dots \geq
+\lambda_d$ and corresponding orthonormal eigenvectors $u_1, \dots, u_d$. Then
+\[
+\max_{\Vert v \Vert = 1} \ v^\top A v = \lambda_1 ,
+\]
+attained at $v = u_1$.
+\end{lemma}
+
+\begin{proof}
+Write $v = \sum_{j=1}^d c_j u_j$ in the eigenbasis, so that $\Vert v \Vert^2 = \sum_j
+c_j^2 = 1$. Then $v^\top A v = \sum_j \lambda_j c_j^2 \leq \lambda_1 \sum_j c_j^2 =
+\lambda_1$, a weighted average of the eigenvalues being at most the largest. Equality
+requires all the weight to sit on eigenvalues equal to $\lambda_1$, and $v = u_1$ works.
+\end{proof}
+
+The general case is the same statement one dimension at a time, and the proof is
+pleasantly short once one thinks in terms of the projector rather than the basis.
+
+\begin{thm}[PCA]
+\label{thm:pca}
+With $A = X^\top X$ symmetric positive semi-definite, with eigenvalues $\lambda_1 \geq
+\dots \geq \lambda_d \geq 0$ and orthonormal eigenvectors $u_1, \dots, u_d$,
+\[
+\max_{V^\top V = I_K} \ \tr\big( V^\top X^\top X V \big) = \lambda_1 + \dots + \lambda_K ,
+\]
+attained by $V = (u_1 \mid \dots \mid u_K)$. The optimal subspace is therefore the span
+of the $K$ leading eigenvectors of $X^\top X$, equivalently of the empirical covariance
+$\hat\Sigma$, and the minimal reconstruction error is $\lambda_{K+1} + \dots +
+\lambda_d$. The vectors $u_1, u_2, \dots$ are called the \emph{principal directions},
+and $u_k$ the $k$-th one.
+\end{thm}
+
+\begin{proof}
+Put $B = V V^\top$, the orthogonal projector onto the chosen subspace, and set
+$\alpha_j \coloneqq u_j^\top B\, u_j$ for each $j$. Two observations:
+\[
+\alpha_j = \Vert V^\top u_j \Vert^2 \geq 0 ,
+\qquad
+\alpha_j \leq \Vert u_j \Vert^2 = 1 ,
+\]
+the second because an orthogonal projection never lengthens a vector, and
+\[
+\sum_{j=1}^d \alpha_j = \tr(B) = \tr(V V^\top) = \tr(V^\top V) = \tr(I_K) = K .
+\]
+Now expand $A = \sum_j \lambda_j u_j u_j^\top$ and use cyclicity again:
+\[
+\tr\big( V^\top A V \big) = \tr(A B) = \sum_{j=1}^d \lambda_j\, u_j^\top B u_j
+= \sum_{j=1}^d \lambda_j \alpha_j .
+\]
+So the problem is bounded by the largest value of $\sum_j \lambda_j \alpha_j$ over all
+$\alpha \in [0,1]^d$ with $\sum_j \alpha_j = K$. Since the $\lambda_j$ are sorted, the
+best possible allocation of a total budget $K$ into weights capped at $1$ is to give a
+full unit to each of the $K$ largest, giving $\lambda_1 + \dots + \lambda_K$. Taking
+$V = (u_1 \mid \dots \mid u_K)$ gives exactly $\alpha_j = \mathbf{1}\{ j \leq K\}$, so
+the bound is attained. Finally the minimal reconstruction error follows from
+\Cref{prop:pca-two-readings} and $\Vert X \Vert_F^2 = \tr(X^\top X) = \sum_j \lambda_j$.
+\end{proof}
+
+\begin{remark}[The solution is nested, and the subspace is what matters]
+The proof shows something the statement hides: the optimal $K$-dimensional subspace
+\emph{contains} the optimal $(K-1)$-dimensional one. One does not re-solve the problem
+for each $K$; one computes the eigenvectors once, sorted, and takes as many as one
+wants. Note also that $V$ itself is not unique (any rotation of an orthonormal basis of
+the same subspace gives the same reconstruction, and eigenvectors are only defined up
+to sign), but the \emph{subspace} is, as soon as $\lambda_K > \lambda_{K+1}$.
+\end{remark}
+
+\begin{remark}[In practice one uses the SVD]
+Forming $X^\top X$ and diagonalising it is the textbook route but not the numerical one,
+for the reason given in \Cref{subsec:numerics}: it squares the condition number. Every
+library instead computes the singular value decomposition $X = U D W^\top$, with $U \in
+\R^{n \times n}$ and $W \in \R^{d \times d}$ orthogonal and $D \in \R^{n \times d}$ zero
+off its diagonal, with diagonal entries $s_1 \geq s_2 \geq \dots \geq 0$. Then $X^\top X = W D^\top D W^\top$, so the principal
+directions are the columns of $W$ (the right singular vectors) and $\lambda_k = s_k^2$.
+The scores are $XV = U D$ restricted to the first $K$ columns.
+\end{remark}
+
+\paragraph{Choosing $K$.}
+The eigenvalues answer this too, at least descriptively. The quantity
+\[
+\frac{\lambda_1 + \dots + \lambda_K}{\lambda_1 + \dots + \lambda_d} \ \in [0, 1]
+\]
+is the \emph{fraction of variance explained} by the first $K$ directions, and plotting
+either it or the individual $\lambda_k$ against $k$ (a \emph{scree plot}) is the usual
+way to decide. One looks for an elbow, a $K$ after which the eigenvalues fall off a
+cliff, or simply takes the smallest $K$ explaining, say, $95\%$ of the variance. Both
+are rules of thumb rather than theorems: there is no test error here to minimise. When
+PCA is used as a preprocessing step before a supervised model, however, $K$ becomes an
+ordinary hyperparameter of that model and can be chosen honestly by cross-validation.
+
+\begin{remark}[Two warnings]
+\emph{Centring is not optional, scaling is a modelling
+choice.} PCA maximises variance, and variance has units: a feature measured in
+millimetres has a variance $10^6$ times larger than the same feature in metres, and
+will monopolise the first direction for no better reason. When the coordinates are
+heterogeneous quantities one therefore standardises them first
+(\Cref{subsec:standardise}), which amounts to diagonalising the empirical
+\emph{correlation} matrix rather than the covariance. When all coordinates are
+commensurate, as with the pixels of an image, standardising is usually the wrong thing
+to do, since the differences in variance are then real information.
+\end{remark}
+
+\begin{exercise}[$\star$]
+Take $d = 2$ and a cloud of points lying almost exactly on a line through the origin.
+What are $\lambda_1, \lambda_2$ roughly, what is $u_1$, and what does the reconstruction
+$X V V^\top$ look like for $K = 1$? Draw the picture.
+\end{exercise}
+
+\begin{exercise}[$\star\star$]
+Show that PCA also solves the following apparently different problem: among all
+matrices $\hat X$ of rank at most $K$, the one minimising $\Vert X - \hat X\Vert_F$ is
+$\hat X = X V V^\top$ with $V$ as in \Cref{thm:pca}. (Start by checking that the rows of
+$X V V^\top$ lie in a $K$-dimensional subspace, so $\rank(XVV^\top) \le K$; then argue
+that any $\hat X$ of rank $\leq K$ has its rows in some $K$-dimensional subspace, and
+that for a \emph{fixed} such subspace the best $\hat X$ is the orthogonal projection of
+$X$ onto it.) This is a special case of the Eckart-Young theorem.
+\end{exercise}
+
+
+\subsection{$K$-means}
+\label{subsec:kmeans}
+
+We now compress in the other direction. Instead of asking that all the points be well
+described by a common subspace, we ask that each point be well described by \emph{one
+of $K$ representatives}.
+
+\paragraph{The objective.}
+Fix the hyperparameter $K$, the number of clusters. We look for
+\begin{itemize}
+    \item a \emph{partition} of the samples into $K$ groups $S_1, \dots, S_K$, i.e.\
+    disjoint sets with $S_1 \cup \dots \cup S_K = \{1, \dots, n\}$;
+    \item and $K$ \emph{centroids} $\mu_1, \dots, \mu_K \in \R^d$, one per group,
+\end{itemize}
+minimising the total squared distance from each point to the centroid of its own group,
+\[
+\mathcal{L}(S, \mu) \ = \ \sum_{k=1}^K \ \sum_{i \in S_k} \big\Vert x_i - \mu_k \big\Vert^2 .
+\]
+This is the natural way to say ``the groups should be tight''. Note that only the
+squared Euclidean distance appears, which is already a modelling commitment: it is what
+will make the clusters come out round.
+
+\paragraph{Matrix form: the same problem as PCA, differently constrained.}
+The partition is more conveniently encoded by an \emph{assignment matrix}. Let
+\[
+Z = (z_{i,k}) \in \{0, 1\}^{n \times K} , \qquad
+\sum_{k=1}^K z_{i,k} = 1 \quad \text{for every } i ,
+\]
+so that $z_{i,k} = 1$ exactly when sample $i$ belongs to cluster $k$, each row of $Z$
+containing a single $1$. Stack the centroids into
+\[
+M = \begin{pmatrix} - & \mu_1 & - \\ & \vdots & \\ - & \mu_K & - \end{pmatrix}
+\in \R^{K \times d} .
+\]
+Then row $i$ of the product $ZM$ is $\sum_k z_{i,k} \mu_k$, which is simply the centroid
+assigned to sample $i$, and therefore
+\[
+\mathcal{L}(M, Z)
+= \sum_{i=1}^n \sum_{k=1}^K z_{i,k} \big\Vert x_i - \mu_k \big\Vert^2
+= \big\Vert X - Z M \big\Vert_F^2 .
+\]
+So $K$-means is
+\[
+\min_{M \in \R^{K \times d}} \ \min_{\substack{Z \in \{0,1\}^{n \times K} \\ \sum_k z_{i,k} = 1 \ \forall i}}
+\ \big\Vert X - Z M \big\Vert_F^2 ,
+\]
+which is exactly the reconstruction problem of \Cref{subsec:unsup-setup}: the
+reconstruction is $\hat X = ZM$, whose rows take at most $K$ distinct values, namely the
+$\mu_k$. Compare with PCA, where $\hat X = X V V^\top$ had rows in a $K$-dimensional
+subspace. Same objective, same $K$, different notion of ``simple''.
+
+\begin{exercise}[$\star$]
+Check the middle equality above in detail: why does $\sum_k z_{i,k}\Vert x_i -
+\mu_k\Vert^2$ equal $\Vert x_i - \sum_k z_{i,k}\mu_k\Vert^2$? (Use that exactly one term
+of the sum is nonzero. Warning: this would be false for a general $Z$ with rows summing
+to $1$ but entries in $[0,1]$ rather than $\{0,1\}$.)
+\end{exercise}
+
+\paragraph{The bad news.}
+Unlike every problem we have met so far, this one is genuinely intractable: minimising
+$\mathcal{L}$ jointly over $Z$ and $M$ is \textbf{NP-hard}, already for $d = 2$. The
+reason is visible in the formulation: $Z$ ranges over a \emph{discrete} set, of size
+$K^n$, and no amount of convexity is going to help, since the objective is not even
+defined on a continuum. Exhaustive search is hopeless, and there is no closed form and
+no gradient descent to fall back on.
+
+\paragraph{The good news: alternating minimisation.}
+What saves the situation is that although the joint problem is hard, each of the two
+variables is easy \emph{given the other}, and in both cases the partial minimisation has
+a closed form. That suggests the obvious algorithm: minimise alternately in $Z$ and in
+$M$. This is \emph{Lloyd's algorithm}, universally called ``the'' $K$-means algorithm.
+
+\begin{lemma}[The two steps]
+\label{lem:kmeans-steps}
+\emph{(Assignment.)} For a fixed $M$, the minimiser over admissible $Z$ is obtained
+independently for each sample by assigning it to its nearest centroid:
+\[
+z_{i,k} = 1 \quad \text{if} \quad k = \argmin_{1 \leq k' \leq K} \ \big\Vert x_i - \mu_{k'} \big\Vert ,
+\]
+ties broken arbitrarily.
+
+\emph{(Update.)} For a fixed $Z$, with associated groups $S_k = \{ i : z_{i,k} = 1\}$
+assumed non-empty, the minimiser over $M$ is obtained independently for each cluster by
+taking the mean of its points:
+\[
+\mu_k = \frac{1}{|S_k|} \sum_{i \in S_k} x_i
+= \frac{\sum_{i=1}^n z_{i,k}\, x_i}{\sum_{i=1}^n z_{i,k}} .
+\]
+\end{lemma}
+
+\begin{proof}
+For the assignment step, write $\mathcal{L}(M, Z) = \sum_{i=1}^n \big( \sum_k z_{i,k}
+\Vert x_i - \mu_k\Vert^2 \big)$. The constraint couples nothing across samples: each
+row of $Z$ is chosen separately, and since that row must put its single $1$ somewhere,
+the best place is the smallest of the $K$ numbers $\Vert x_i - \mu_k \Vert^2$.
+
+For the update step, the objective splits as $\sum_{k=1}^K \big( \sum_{i \in S_k} \Vert
+x_i - \mu_k \Vert^2 \big)$, and each bracket involves only $\mu_k$. So we must minimise
+$\mu \mapsto \sum_{i \in S} \Vert x_i - \mu \Vert^2$ for a fixed set $S$. This is a
+quadratic function of $\mu$, with Hessian $2 |S|\, I_d \succ 0$, hence strictly convex,
+so its unique minimiser is the point where its gradient vanishes:
+\[
+\nabla_\mu \sum_{i \in S} \Vert x_i - \mu \Vert^2
+= - 2 \sum_{i \in S} \big( x_i - \mu \big)
+= 2 \Big( |S|\, \mu - \sum_{i \in S} x_i \Big) = 0
+\quad \Longleftrightarrow \quad
+\mu = \frac{1}{|S|} \sum_{i \in S} x_i ,
+\]
+which is the announced mean.
+\end{proof}
+
+
+\begin{center}
+\fbox{\parbox{0.9\textwidth}{
+\textbf{Lloyd's algorithm.} Initialise the centroids $\mu_1^{(0)}, \dots, \mu_K^{(0)}
+\in \R^d$. Then for $t = 0, 1, 2, \dots$ repeat:
+\begin{enumerate}
+    \item \emph{Assignment.} $Z^{(t+1)} = \argmin_Z \ \mathcal{L}(M^{(t)}, Z)$: assign
+    each sample to its nearest current centroid.
+    \item \emph{Update.} $M^{(t+1)} = \argmin_M \ \mathcal{L}(M, Z^{(t+1)})$: replace
+    each centroid by the mean of the samples just assigned to it.
+\end{enumerate}
+Stop when the assignment no longer changes.
+}}
+\end{center}
+
+\paragraph{Why it stops.}
+The convergence argument is unusual and pleasantly elementary: it is not an analytic
+statement about small step sizes, but a counting argument.
+
+\begin{prop}[Convergence in finitely many steps]
+\label{prop:lloyd-converges}
+The sequence $\mathcal{L}(M^{(t)}, Z^{(t)})$ is non-increasing and bounded below by $0$.
+Moreover Lloyd's algorithm terminates after finitely many iterations.
+\end{prop}
+
+\begin{proof}
+Each of the two steps minimises $\mathcal{L}$ in one variable with the other held fixed,
+so neither can increase it:
+\[
+\mathcal{L}\big(M^{(t)}, Z^{(t)}\big) \ \geq \ \mathcal{L}\big(M^{(t)}, Z^{(t+1)}\big)
+\ \geq \ \mathcal{L}\big(M^{(t+1)}, Z^{(t+1)}\big) ,
+\]
+and $\mathcal{L} \geq 0$ as a sum of squares. For termination, note that after the
+update step the centroids are \emph{determined} by the assignment, so from $t \geq 1$
+onwards the value $\mathcal{L}(M^{(t)}, Z^{(t)})$ is a function of $Z^{(t)}$ alone. There are at most
+$K^n$ admissible assignment matrices, hence finitely many possible values. A
+non-increasing sequence taking finitely many values is eventually constant; and as soon
+as the value fails to decrease strictly, the assignment step has returned the same $Z$
+and the algorithm has stopped by its own criterion.
+\end{proof}
+
+\begin{remark}[Stopping is not succeeding]
+\Cref{prop:lloyd-converges} guarantees termination, and nothing more. The point reached
+is a \emph{local} minimum, in the weak sense that neither step alone can improve it, and
+it can be arbitrarily worse than the global one: it is easy to draw four obvious
+clusters and an initialisation from which Lloyd's algorithm splits one of them in two
+and merges another two, then stops, perfectly stable and perfectly wrong. This is
+exactly the difficulty that convexity spared us throughout the supervised part of these
+notes, and there is no way around it here.
+
+The standard remedies are (i) to run the algorithm several times from different random
+initialisations and keep the run with the smallest final $\mathcal{L}$, which is cheap
+and is what libraries do by default, and (ii) to initialise cleverly rather than
+uniformly at random, spreading the initial centroids out. The latter is the
+\emph{$K$-means$++$} initialisation: pick the first centroid uniformly among the data
+points, then each subsequent one at random with probability proportional to the squared
+distance to the nearest centroid already chosen. It costs almost nothing and improves
+results markedly.
+\end{remark}
+
+\paragraph{What can go wrong.}
+Beyond the local minima, three limitations are worth knowing, all of them consequences
+of the squared Euclidean distance in the objective.
+\begin{itemize}
+    \item \emph{The number of clusters must be given.} $K$ is a hyperparameter, and
+    unlike in the supervised setting there is no held-out error to select it: the
+    objective $\mathcal{L}$ decreases mechanically as $K$ grows, reaching $0$ at $K = n$,
+    so it cannot be used to choose $K$ either. The usual device is again an
+    \emph{elbow plot} of the final $\mathcal{L}$ against $K$, looking for the point
+    where the curve flattens.
+    \item \emph{The clusters come out round, and of comparable size.} Minimising squared
+    distances to a centre means the implied shape is a ball, and the boundary between
+    two clusters is the hyperplane bisecting the segment between their centroids. Two
+    interleaved crescents, or one long thin cluster next to a round one, will be cut in
+    a way no human would choose. If the natural groups are not blobs, $K$-means is the
+    wrong tool.
+    \item \emph{Outliers hurt twice.} A single far-away point contributes an enormous
+    squared distance, so it drags the centroid of whichever cluster adopts it, and it may
+    even claim a whole cluster for itself. Squared errors are not robust, exactly as in
+    \Cref{sec:regression}.
+\end{itemize}
+To which one should add the familiar warning that the Euclidean distance mixes the
+coordinates, so features on wildly different scales must be standardised first.
+
+\begin{exercise}[$\star$]
+Why does $\min \mathcal{L}$ decrease as $K$ increases? (Show that any solution with $K$
+clusters can be turned into one with $K+1$ clusters and no larger loss.) Deduce that
+choosing $K$ by minimising $\mathcal{L}$ would always return $K = n$.
+\end{exercise}
+
+\begin{exercise}[$\star\star$]
+Take $n = 4$ points in $\R^2$ at the corners of a rectangle that is much wider than it
+is tall, and $K = 2$. Find the global minimiser. Then exhibit an initialisation of the
+centroids from which Lloyd's algorithm converges to the other, worse, partition.
+\end{exercise}
+
+

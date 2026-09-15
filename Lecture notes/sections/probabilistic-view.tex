@@ -1,0 +1,554 @@
+\section{The probabilistic view}
+\label{sec:probabilistic}
+
+Every method in these notes was introduced the same way: we chose a function class, we
+chose a loss, and we minimised. The choice of loss was always motivated, but always
+somewhat by hand. The squared error was ``by far the most common''; the logistic loss
+won a beauty contest against three rivals; the $K$-means objective simply asserted that
+groups should be tight. The reader is entitled to ask where these expressions actually
+come from, and whether there is any principle behind them or only tradition.
+
+There is a principle, and this section is about it. In every case, the objective we
+minimised is the \emph{negative log-likelihood} of an explicit probabilistic model of
+how the data was generated. Different losses are not competing conventions: they are
+different assumptions about the data, written in a different alphabet. This is worth a
+section of its own for three reasons. It explains where our losses come from; it tells
+us how to build a new one when the standard assumptions do not fit; and it delivers
+something the risk-minimisation view never gave us, namely predictions that come with
+probabilities attached rather than bare numbers.
+
+\subsection{Maximum likelihood in one page}
+\label{subsec:mle}
+
+\paragraph{The principle.}
+Suppose we posit a family of probability distributions $p_\theta$, indexed by a
+parameter $\theta$, as candidate explanations for how the data was produced. Having
+observed data $\mathcal{D}$, the \emph{likelihood} of $\theta$ is the probability (or
+density) that the model assigns to what we actually saw,
+\[
+\theta \ \longmapsto \ p_\theta(\mathcal{D}) .
+\]
+\emph{Maximum likelihood estimation} (MLE) picks the parameter making the observed data
+as unsurprising as possible:
+\[
+\hat\theta \ \in \ \argmax_{\theta} \ p_\theta(\mathcal{D}) .
+\]
+Note the logic, which students often reverse: the data is fixed and the parameter
+varies. The likelihood is \emph{not} a probability distribution over $\theta$.
+
+\paragraph{Why the logarithm, and why the minus sign.}
+If the $n$ samples are independent, the likelihood is a product, and products are
+unpleasant: they underflow, and their derivatives are a mess. Since $\log$ is strictly
+increasing, maximising $p_\theta(\mathcal{D})$ is the same as maximising $\log
+p_\theta(\mathcal{D})$, which turns the product into a sum. Flipping the sign to get a
+minimisation, as is our habit, gives the \emph{negative log-likelihood}
+\[
+\mathrm{NLL}(\theta) \ = \ - \log p_\theta(\mathcal{D})
+\ = \ - \sum_{i=1}^n \log p_\theta(\text{sample } i) ,
+\]
+and dividing by $n$, which does not move the minimiser (the same remark as in
+\Cref{sec:regression}), puts it in exactly the shape of an empirical risk:
+\[
+\boxed{\
+\frac{1}{n}\, \mathrm{NLL}(\theta)
+\ = \ \frac{1}{n} \sum_{i=1}^n \underbrace{\big( - \log p_\theta(\text{sample } i) \big)}_{\text{a loss } \ell}
+\ }
+\]
+This is the whole dictionary. \emph{A probabilistic model of one sample is a loss
+function, and the loss is minus the log of the model's density.} The rest of this
+section is that sentence applied three times.
+
+\begin{remark}[Additive constants are free]
+Terms in the negative log-likelihood that do not involve $\theta$ can be dropped: they
+shift the objective without moving its minimiser. We use this constantly below, and it
+is why factors like $(2\pi)^{-d/2}$ never survive into the final loss.
+\end{remark}
+
+
+\subsection{Least squares is maximum likelihood with Gaussian noise}
+\label{subsec:mle-ls}
+
+\paragraph{The model.}
+Assume, exactly as in \Cref{subsec:bv-ridge}, that the response is a linear function of
+the input corrupted by independent Gaussian noise:
+\[
+y_i = \langle w, x_i \rangle + \varepsilon_i ,
+\qquad
+\varepsilon_1, \dots, \varepsilon_n \ \text{ i.i.d. } \ \mathcal{N}(0, \sigma^2) .
+\]
+Here $w$ is the parameter of the \emph{model} we are fitting, and it plays both roles at
+once: the model asserts that the truth is $\langle w, \cdot\rangle$ for some $w$, and
+maximum likelihood then searches over exactly that $w$. (In \Cref{subsec:bv-ridge}, where
+the truth and the fit had to be compared, the two were carefully distinguished as
+$w^\star$ and $\hat w$. Here they need not be, since the whole point is to \emph{find}
+the parameter, and the estimator we end up with is the $\hat w$ of that subsection.)
+Equivalently, the model says that conditionally on the input, the response is Gaussian
+around the prediction,
+\[
+p_w\big( y_i \mid x_i \big)
+= \frac{1}{\sqrt{2\pi\sigma^2}} \, \exp\Big( - \frac{\big( y_i - \langle w, x_i\rangle \big)^2}{2\sigma^2} \Big) .
+\]
+
+\begin{prop}[Least squares is the MLE]
+\label{prop:mle-ls}
+Under this model, and for any fixed $\sigma^2 > 0$,
+\[
+\argmax_{w \in \R^d} \ p_w\big( y \mid X \big)
+\ = \ \argmin_{w \in \R^d} \ \frac{1}{2n} \big\Vert X w - y \big\Vert^2 ,
+\]
+that is, the maximum likelihood estimator of $w$ is exactly the least-squares solution
+of \Cref{sec:least-squares}.
+\end{prop}
+
+\begin{proof}
+By independence the likelihood factorises, so
+\[
+- \log p_w(y \mid X)
+= - \sum_{i=1}^n \log p_w(y_i \mid x_i)
+= \frac{1}{2\sigma^2} \sum_{i=1}^n \big( y_i - \langle w, x_i\rangle \big)^2
++ \frac{n}{2} \log\big( 2\pi\sigma^2 \big) .
+\]
+The second term does not involve $w$, and the first is $\tfrac{n}{\sigma^2}$ times the
+least-squares objective $L(w) = \tfrac{1}{2n}\Vert Xw - y\Vert^2$. Multiplying an
+objective by a positive constant and adding another does not move its minimisers, so
+the two problems have the same solutions.
+\end{proof}
+
+Two things are worth extracting from this innocuous computation.
+
+\paragraph{The mysterious $\tfrac12$ was never mysterious.}
+The factor $\tfrac12$ we carried through the squared loss since \Cref{sec:regression},
+justified there only as ``it cancels the $2$ from the derivative'', is the $\tfrac12$
+in the exponent of a Gaussian density. So is the square itself. Once the noise is
+declared Gaussian, there is no freedom left: the loss is determined.
+
+\paragraph{The noise level is itself estimable.}
+We treated $\sigma^2$ as fixed, but nothing stops us from maximising over it too.
+Differentiating the negative log-likelihood above in $\sigma^2$ and cancelling gives
+\[
+\hat\sigma^2 = \frac{1}{n} \big\Vert X \hat w - y \big\Vert^2 ,
+\]
+the mean squared residual. This is a genuinely new object: it is an estimate of the
+irreducible noise floor $\sigma^2$ of \Cref{sec:bias-variance}, which up to now was an
+unknown constant we could only reason about. It is also the ingredient that turns a
+prediction into a \emph{predictive distribution}: instead of returning the number
+$\langle \hat w, x\rangle$, the model returns $\mathcal{N}(\langle \hat w, x\rangle,
+\hat\sigma^2)$, and hence an interval rather than a point. Be warned that $\hat\sigma^2$
+is biased downwards, for the reason of \Cref{subsec:cv}: the residuals are computed on
+the very data used to fit $\hat w$. The standard correction divides by $n - d$ instead
+of $n$.
+
+\begin{remark}[Change the noise, change the loss]
+The real payoff is that the dictionary runs both ways. The menu of losses in
+\Cref{sec:regression} was presented as a list of options; each entry is in fact a
+choice of noise distribution.
+\begin{itemize}
+    \item Gaussian noise, $p(\varepsilon) \propto e^{-\varepsilon^2/2\sigma^2}$, gives
+    the \emph{squared} error.
+    \item Laplace noise, $p(\varepsilon) \propto e^{-|\varepsilon|/b}$, gives
+    $-\log p = |\varepsilon|/b + \text{const}$, that is, the \emph{absolute} error. Its
+    heavier tails make a large residual far less improbable, which is precisely the
+    formal content of the vague claim that the absolute error is ``more robust to
+    outliers''.
+    \item A distribution that is Gaussian in the middle and Laplace in the tails gives
+    the \emph{Huber} loss, and the crossover point of the two regimes is the Huber
+    parameter.
+\end{itemize}
+So the question ``which loss should I use?'' becomes the far more answerable question
+``how do I expect my data to be wrong?''. This is the main practical benefit of the
+probabilistic view.
+\end{remark}
+
+\begin{exercise}[$\star$]
+Carry out the Laplace computation: write the negative log-likelihood of the model $y_i
+= \langle w, x_i\rangle + \varepsilon_i$ with $\varepsilon_i$ i.i.d.\ of density
+$\tfrac{1}{2b}e^{-|\varepsilon|/b}$, and check that minimising it is minimising
+$\sum_i | y_i - \langle w, x_i\rangle |$.
+\end{exercise}
+
+\begin{exercise}[$\star\star$]
+Suppose the noise is Gaussian but \emph{heteroscedastic}: $\varepsilon_i \sim
+\mathcal{N}(0, \sigma_i^2)$ with known but unequal variances. Show that the MLE now
+minimises a \emph{weighted} least-squares objective $\sum_i (y_i - \langle w,
+x_i\rangle)^2 / \sigma_i^2$, and interpret the weights.
+\end{exercise}
+
+
+\subsection{Ridge is maximum likelihood with a prior}
+\label{subsec:map}
+
+The same computation explains regularisation, which so far we justified only by its
+effects. The move is to treat the parameter $w$ itself as random, with a
+\emph{prior} distribution encoding what we believe about it before seeing any data. Take
+the natural choice, a centred Gaussian with variance $\tau^2$ in every coordinate:
+\[
+w \ \sim \ \mathcal{N}\big( 0, \tau^2 I_d \big) ,
+\qquad\text{i.e.}\qquad
+p(w) \propto \exp\Big( - \frac{\Vert w \Vert^2}{2\tau^2} \Big) .
+\]
+Bayes' rule gives the \emph{posterior} density of $w$ given the data, proportional to
+likelihood times prior, and the \emph{maximum a posteriori} (MAP) estimator maximises
+it. Taking minus the logarithm turns the product into a sum:
+\[
+- \log p\big( w \mid X, y \big)
+= \underbrace{\frac{1}{2\sigma^2} \big\Vert X w - y \big\Vert^2}_{\text{from the likelihood}}
++ \underbrace{\frac{1}{2\tau^2} \big\Vert w \big\Vert^2}_{\text{from the prior}}
++ \ \text{constant} .
+\]
+
+\begin{prop}[Ridge is the MAP estimator]
+\label{prop:map-ridge}
+The MAP estimator under the Gaussian prior above is the ridge estimator
+$w^\star_\lambda$ of \Cref{subsec:ridge}, with
+\[
+\lambda = \frac{\sigma^2}{n\, \tau^2} .
+\]
+\end{prop}
+
+\begin{proof}
+Divide the displayed objective by $n/\sigma^2$, which does not move its minimiser:
+\[
+\frac{1}{2n} \big\Vert Xw - y \big\Vert^2 + \frac{\sigma^2}{2 n \tau^2} \Vert w \Vert^2 ,
+\]
+which is $L_\lambda(w) = L(w) + \tfrac{\lambda}{2}\Vert w\Vert^2$ with $\lambda =
+\sigma^2 / (n\tau^2)$.
+\end{proof}
+
+The formula for $\lambda$ is the interesting part, because it says what the
+regularisation strength \emph{means}: it is the ratio of how noisy we think the data is
+to how large we think the weights are. Regularise heavily when the data is noisy
+($\sigma^2$ large) or when we are confident the truth is small ($\tau^2$ small); do not
+regularise when the prior is flat ($\tau^2 \to \infty$, hence $\lambda \to 0$, recovering
+plain least squares). It also explains the $n$ that appears in the ridge closed form
+$(X^\top X + n\lambda I)^{-1}X^\top y$: the prior is a fixed amount of information,
+while the data accumulates, so its relative weight must decay like $1/n$.
+
+\begin{remark}[Other priors, other penalties]
+As with the noise, changing the prior changes the penalty. A Laplace prior $p(w)
+\propto \exp(-\Vert w\Vert_1 / b)$ gives the penalty $\Vert w \Vert_1 = \sum_j |w_j|$,
+which is the \emph{Lasso}, the standard route to \emph{sparse} solutions in which many
+coordinates of $w$ are exactly zero. A flat prior gives no penalty at all. The general
+statement is the pleasing symmetry: \emph{the loss encodes the noise, the penalty
+encodes the prior}.
+\end{remark}
+
+\begin{remark}[MAP is not the whole Bayesian story]
+Taking the maximum of the posterior throws away everything except its location. The
+fully Bayesian treatment keeps the entire posterior distribution over $w$, and predicts
+by averaging over it, which yields error bars on the predictions rather than a single
+curve. We do not develop this, but it is worth knowing that ridge is the visible tip of
+that construction.
+\end{remark}
+
+
+\subsection{Logistic regression is maximum likelihood with Bernoulli labels}
+\label{subsec:mle-logistic}
+
+We now do the same for classification, where the payoff is larger still: the
+probabilistic view finally says what the sigmoid \emph{is}, and explains the name
+``logistic regression''.
+
+\paragraph{The model.}
+For a binary label the only thing to model is the probability of each class. Since a
+probability must lie in $[0,1]$ and our model produces a real-valued score $\langle w,
+x\rangle$, we need a function squashing $\R$ into $(0,1)$. Take the sigmoid of
+\Cref{subsec:logistic}, and declare
+\[
+\P_w\big( y = +1 \mid x \big) = \sigma\big( \langle w, x \rangle \big) ,
+\qquad
+\sigma(t) = \frac{1}{1 + e^{-t}} .
+\]
+(Here $\sigma$ without a square is the sigmoid, not the noise standard deviation of the
+previous subsections; see \Cref{subsec:symbols}.) The complementary probability comes
+for free from the identity $\sigma(-t) = 1 - \sigma(t)$:
+\[
+\P_w\big( y = -1 \mid x \big) = 1 - \sigma\big( \langle w, x\rangle \big)
+= \sigma\big( - \langle w, x\rangle \big) .
+\]
+The two cases collapse into a single formula, and this is exactly where the $\pm 1$
+convention earns its keep:
+\[
+\boxed{\ \P_w\big( y \mid x \big) = \sigma\big( y \, \langle w, x \rangle \big) = \sigma(m) \ }
+\]
+with $m$ the margin of \Cref{subsec:binary}. The margin, introduced there as a
+bookkeeping device that packaged correctness into one number, turns out to be the
+natural argument of the model's probability.
+
+\begin{prop}[Logistic regression is the MLE]
+\label{prop:mle-logistic}
+Under this model the negative log-likelihood of the sample is
+\[
+- \frac{1}{n} \sum_{i=1}^n \log \P_w\big( y_i \mid x_i \big)
+= \frac{1}{n} \sum_{i=1}^n \log\Big( 1 + \exp\big( - y_i \langle w, x_i\rangle \big) \Big) ,
+\]
+which is precisely the logistic risk $L(w)$ of \Cref{subsec:logistic}.
+\end{prop}
+
+\begin{proof}
+By the boxed identity, $-\log \P_w(y_i \mid x_i) = -\log\sigma(m_i)$, and directly from
+the definition of the sigmoid,
+\[
+- \log \sigma(m) = \log \frac{1}{\sigma(m)} = \log\big( 1 + e^{-m} \big) .
+\]
+Summing over $i$ and dividing by $n$ gives the claim.
+\end{proof}
+
+So the logistic loss was not chosen for its four good properties after all; those
+properties are consequences. It is the only loss consistent with modelling the label as
+a Bernoulli variable whose parameter is a sigmoid of a linear score.
+
+\paragraph{Why ``regression''.}
+The name has puzzled every student who met it, since the method classifies. The answer
+is that something \emph{is} being regressed linearly, just not $y$. Invert the model:
+\[
+\log \frac{\P_w(y = +1 \mid x)}{\P_w(y = -1 \mid x)}
+= \log \frac{\sigma(\langle w, x\rangle)}{\sigma(-\langle w, x\rangle)}
+= \langle w, x \rangle .
+\]
+The quantity on the left is the \emph{log-odds}, or \emph{logit}, of the positive class.
+Logistic regression is thus an ordinary linear model \emph{for the log-odds}, which is
+also why $\langle w, x\rangle$ deserved the name ``score'': it is a log-odds, and the
+decision boundary $\langle w, x\rangle = 0$ is the set where the two classes are judged
+equally likely.
+
+\paragraph{Multiclass: the softmax weights are probabilities.}
+The same reading upgrades \Cref{subsec:multiclass}. Model the label as a categorical
+variable whose probabilities are the softmax of the $K$ scores,
+\[
+\P_W\big( y = k \mid x \big) = p_k(x)
+= \frac{\exp(\langle w_k, x\rangle)}{\sum_{k'=1}^K \exp(\langle w_{k'}, x\rangle)} ,
+\]
+which is legitimate precisely because the $p_k(x)$ are positive and sum to $1$. Then
+\[
+- \frac1n \sum_{i=1}^n \log \P_W\big( y_i \mid x_i \big)
+= \frac1n \sum_{i=1}^n \Big[ - \langle w_{y_i}, x_i\rangle + \log \sum_{k=1}^K \exp\big( \langle w_k, x_i \rangle \big) \Big] ,
+\]
+which is verbatim the cross-entropy objective of \Cref{subsec:multiclass}. So the
+``softmax weights'', which we introduced as a convenient shorthand appearing in a
+gradient, are the model's estimated class probabilities, and this is what a call to
+\texttt{predict\_proba} returns. It also retrospectively explains the redundancy of the
+parametrisation: adding a constant to every score leaves the probabilities unchanged,
+because only differences of log-probabilities are identifiable.
+
+\begin{remark}[Why separable data sends $\Vert w\Vert$ to infinity]
+\Cref{subsec:separable} showed that on separable data the logistic risk has no
+minimiser and $\Vert w_t \Vert \to \infty$, which looked like a technical pathology. The
+probabilistic view makes it obvious. Maximising the likelihood means making the
+observed labels as probable as possible, and the model can reach probability $1$ only in
+the limit $\sigma(m) \to 1$, that is $m \to +\infty$. If a $w$ classifies everything
+correctly, the likelihood is still strictly less than $1$ and can always be improved by
+scaling $w$ up. The optimiser is not misbehaving: it is being asked for certainty, and
+certainty costs infinite log-odds. Adding the $\ell_2$ penalty is, by
+\Cref{subsec:map}, exactly imposing a prior that forbids arbitrarily confident models.
+\end{remark}
+
+\begin{remark}[A probability is not automatically a good probability]
+Reading $\sigma(\langle \hat w, x\rangle)$ as a probability is licensed by the model,
+not by reality. If the model is misspecified, the numbers can be systematically
+over-confident even when the classification is accurate: of all the points to which a
+model assigns probability $0.9$, appreciably fewer than $90\%$ may actually be positive.
+A model for which that proportion is right is called \emph{calibrated}, and checking
+calibration on held-out data is a separate exercise from measuring accuracy. Modern
+neural networks are notoriously badly calibrated in this sense.
+\end{remark}
+
+\begin{exercise}[$\star$]
+Recover the $\{0,1\}$ form of the objective directly from the model: show that with
+$\tilde y \in \{0,1\}$ and $\sigma_i = \sigma(\langle w, x_i\rangle)$, the likelihood of
+one sample is $\sigma_i^{\tilde y_i} (1 - \sigma_i)^{1 - \tilde y_i}$, and that its
+negative logarithm is the binary cross-entropy of \Cref{subsec:logistic}.
+\end{exercise}
+
+\begin{exercise}[$\star\star$]
+The gradient of the logistic risk was $\nabla L(w) = -\tfrac1n\sum_i \sigma(-m_i) y_i
+x_i$. Show that it can be rewritten as $\tfrac1n \sum_i \big( \hat p_i - \tilde y_i
+\big) x_i$, where $\tilde y_i \in \{0,1\}$ is the label and $\hat p_i = \sigma(\langle
+w, x_i\rangle)$ the predicted probability of class $1$. Compare with
+\Cref{prop:softmax-grad}: in both cases the gradient is driven by ``predicted
+probability minus observed label''. Deduce that at a stationary point the predicted
+probabilities match the labels on average in every feature direction.
+\end{exercise}
+
+
+\subsection{$K$-means is maximum likelihood with isotropic Gaussians}
+\label{subsec:mle-kmeans}
+
+Unsupervised learning fits the same frame, with one twist: there is no $y$, so what the
+model must explain is the distribution of the inputs themselves.
+
+\paragraph{The model.}
+Suppose each sample was produced by first choosing a cluster and then drawing a point
+from a Gaussian centred at that cluster's centroid, with identity covariance. Writing
+$z_{i,k} = 1$ when sample $i$ belongs to cluster $k$, as in \Cref{subsec:kmeans},
+\[
+p\big( x_i \mid \mu, z_i \big) = \mathcal{N}\big( x_i ; \mu_k, I_d \big)
+\ \propto \ \exp\Big( - \tfrac{1}{2} \big\Vert x_i - \mu_k \big\Vert^2 \Big)
+\qquad \text{when } z_{i,k} = 1 .
+\]
+The $K$ cases can be folded into a single product, because every exponent but one
+carries a factor $z_{i,k} = 0$:
+\[
+p\big( x_i \mid \mu, z_i \big) \ \propto \ \prod_{k=1}^K
+\exp\Big( - \tfrac{1}{2} \big\Vert x_i - \mu_k \big\Vert^2 z_{i,k} \Big) .
+\]
+
+\begin{prop}[$K$-means is the MLE]
+\label{prop:mle-kmeans}
+Under this model, and treating both the centroids $M$ and the assignments $Z$ as
+parameters,
+\[
+- \log \prod_{i=1}^n p\big( x_i \mid \mu, z_i \big)
+= \frac{1}{2} \sum_{i=1}^n \sum_{k=1}^K \big\Vert x_i - \mu_k \big\Vert^2 z_{i,k}
+\ + \ \text{constant}
+\ = \ \frac{1}{2}\, \mathcal{L}(M, Z) + \text{constant} ,
+\]
+so maximising the likelihood over $(M, Z)$ is minimising the $K$-means objective.
+\end{prop}
+
+\begin{proof}
+Take the logarithm of the product form above, which turns the product over $i$ and $k$
+into a double sum, and collect the normalising constants of the $n$ Gaussian densities
+into the additive constant.
+\end{proof}
+
+The two limitations of \Cref{subsec:kmeans} are now not defects but assumptions made
+visible.
+\begin{itemize}
+    \item The covariance is $I_d$: \emph{spherical, and identical for every cluster}.
+    That is why $K$-means produces round clusters of comparable spread and cuts a long
+    thin group in half.
+    \item Gaussian tails decay like $e^{-r^2/2}$, so a point far from every centroid is
+    assigned an enormous cost. That is why \emph{outliers} drag the centroids so
+    effectively. It is the same fragility as the squared error in regression, and for
+    literally the same reason.
+\end{itemize}
+Both point at the same fix: allow a richer model.
+
+\subsection{Gaussian mixtures: summing over the latent variable}
+\label{subsec:gmm}
+
+The model above is slightly odd as a probabilistic object, because the assignments
+$z_i$ are treated as \emph{parameters} to be optimised, one per sample, growing with the
+dataset. The principled alternative is to treat them as unobserved random variables and
+\emph{sum them out}. Doing so, and simultaneously relaxing the two assumptions just
+identified, gives the \emph{Gaussian mixture model} (GMM).
+
+A sample is drawn by picking a cluster with probability $\pi_k$,
+\[
+\P(z = k) = \pi_k , \qquad \pi_k \geq 0 , \quad \sum_{k=1}^K \pi_k = 1 ,
+\]
+and then drawing $x$ from that cluster's own Gaussian, now with its own covariance:
+\[
+p\big( x \mid z = k \big) = \frac{1}{(2\pi)^{d/2} \det(\Sigma_k)^{1/2}}
+\exp\Big( - \tfrac12 (x - \mu_k)^\top \Sigma_k^{-1} (x - \mu_k) \Big) .
+\]
+Marginalising over the unobserved $z$ gives a density on $\R^d$,
+\[
+p(x) = \sum_{k=1}^K \pi_k \, p(x \mid z = k) = \sum_{k=1}^K \pi_k \, \mathcal{N}\big( x ; \mu_k, \Sigma_k \big) ,
+\]
+and fitting the model means minimising the negative log-likelihood
+\[
+- \sum_{i=1}^n \log p(x_i)
+= - \sum_{i=1}^n \log \Big( \sum_{k=1}^K \pi_k \, \mathcal{N}\big( x_i ; \mu_k, \Sigma_k \big) \Big)
+\]
+over $(\pi_k, \mu_k, \Sigma_k)_{k=1}^K$. Note the shape: a logarithm \emph{of a sum},
+which no longer splits. This is what makes the objective non-convex and denies it a
+closed form, and it is the continuous counterpart of the combinatorial hardness of
+$K$-means.
+
+\paragraph{Soft assignments.}
+Since $z$ is now a random variable, one does not assign a point to a cluster; one
+computes the posterior probability that it came from each,
+\[
+\P\big( z = k \mid x_i \big)
+= \frac{\pi_k \, \mathcal{N}(x_i ; \mu_k, \Sigma_k)}{\sum_{k'=1}^K \pi_{k'} \, \mathcal{N}(x_i ; \mu_{k'}, \Sigma_{k'})} ,
+\]
+called the \emph{responsibility} of cluster $k$ for sample $i$. These are numbers in
+$(0,1)$ summing to $1$ over $k$: they are the softened version of the row $z_{i,\cdot}$
+of the assignment matrix, and structurally they are the softmax weights of
+\Cref{subsec:multiclass} once more, a normalised exponential of scores. The model is
+fitted by the \emph{expectation-maximisation} algorithm, which alternates computing the
+responsibilities with re-estimating $(\pi_k, \mu_k, \Sigma_k)$ as
+responsibility-weighted averages. It is Lloyd's algorithm with soft assignments in
+place of hard ones, and it comes with the same guarantee and the same weakness: the
+likelihood increases at every iteration, and the limit is a local optimum.
+
+\begin{remark}[$K$-means is the zero-temperature limit]
+Fix $\Sigma_k = \epsilon I_d$ for every $k$ and $\pi_k = 1/K$, and let $\epsilon \to 0$.
+The responsibilities involve ratios of $e^{-\Vert x_i - \mu_k\Vert^2 / 2\epsilon}$,
+which tend to $0$ or $1$ according to which centroid is nearest, so the soft
+assignments harden and expectation-maximisation degenerates exactly into Lloyd's
+algorithm. $K$-means is therefore a Gaussian mixture at zero temperature: the price of
+its simplicity is that it must commit to one cluster for every point, however ambiguous
+that point may be.
+\end{remark}
+
+\begin{exercise}[$\star$]
+Two points sit exactly halfway between two centroids. What does $K$-means report for
+them, and what does a Gaussian mixture report? Which answer is more informative, and in
+what situation would you nonetheless prefer the first?
+\end{exercise}
+
+
+\subsection{Summary, and the limits of the view}
+\label{subsec:mle-summary}
+
+Every objective in these notes is now accounted for by a single principle.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\begin{tabular}{@{}L{0.235\textwidth}L{0.35\textwidth}L{0.33\textwidth}@{}}
+\toprule
+\textbf{Method} & \textbf{Probabilistic model} & \textbf{Resulting objective} \\
+\midrule
+Least squares & $y \mid x \sim \mathcal{N}(\langle w, x\rangle, \sigma^2)$
+  & squared error $\tfrac{1}{2n}\Vert Xw - y\Vert^2$ \\
+Absolute / Huber loss & Laplace / mixed noise
+  & $\sum_i |y_i - \langle w, x_i\rangle|$, resp.\ Huber \\
+Ridge & the above, plus prior $w \sim \mathcal{N}(0, \tau^2 I)$
+  & $L(w) + \tfrac{\lambda}{2}\Vert w\Vert^2$, $\lambda = \tfrac{\sigma^2}{n\tau^2}$ \\
+Lasso & the above, plus a Laplace prior on $w$
+  & $L(w) + \lambda \Vert w \Vert_1$ \\
+Logistic regression & $\P(y = +1\mid x) = \sigma(\langle w, x\rangle)$
+  & logistic risk $\tfrac1n\sum_i \log(1 + e^{-m_i})$ \\
+Softmax regression & $\P(y = k \mid x) = p_k(x)$, categorical
+  & cross-entropy \\
+$K$-means & $x \sim \mathcal{N}(\mu_k, I_d)$, $k$ a parameter
+  & $\Vert X - ZM\Vert_F^2$ \\
+Gaussian mixture & $x \sim \sum_k \pi_k \mathcal{N}(\mu_k, \Sigma_k)$, $k$ latent
+  & $-\sum_i \log \sum_k \pi_k \mathcal{N}(x_i; \mu_k, \Sigma_k)$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Reading the table across, three benefits stand out.
+\begin{itemize}
+    \item \emph{It explains the losses.} None of the objectives we minimised was
+    arbitrary; each encodes an assumption, and knowing the assumption tells you when
+    the method will fail. ``Least squares is sensitive to outliers'' and ``Gaussian
+    tails make large residuals very improbable'' are the same sentence.
+    \item \emph{It generates new methods.} Faced with a problem the standard losses do
+    not fit (counts, durations, censored data, heteroscedastic noise), one does not
+    guess a loss: one writes down a model of the data and takes minus its logarithm.
+    \item \emph{It returns distributions, not just numbers.} A fitted model gives
+    $\hat\sigma^2$, predictive intervals, class probabilities and cluster
+    responsibilities, none of which the bare minimisation of a loss provides.
+\end{itemize}
+
+\begin{remark}[Two honest caveats]
+First, \emph{the model is an assumption, not a fact}. The probabilities a fitted model
+reports are internal to it, and if the model is wrong they can be confidently wrong; the
+calibration warning of \Cref{subsec:mle-logistic} applies throughout. What the
+probabilistic view buys is that the assumptions become explicit and therefore
+criticisable, which is progress over a loss chosen by habit.
+
+Second, \emph{maximum likelihood is one principle among several}. It says nothing about
+generalisation: \Cref{sec:bias-variance} showed that the unbiased estimator, which is
+what MLE delivers for least squares, is never the one minimising test error, and that
+some shrinkage always helps. The probabilistic view recovers that shrinkage only when a
+prior is added by hand, and choosing that prior brings us straight back to
+cross-validation. Likelihood explains where our objectives come from; it does not
+absolve us from checking how well they predict.
+\end{remark}

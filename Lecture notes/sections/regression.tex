@@ -1,0 +1,924 @@
+\section{Regression}
+\label{sec:regression}
+
+\subsection{The regression problem}
+
+In a \emph{regression} problem we want to predict a real-valued quantity from
+some input. The input is described by a \emph{feature vector}
+$x \in \X \subseteq \R^d$, and the quantity we want to predict is a
+\emph{response} $y \in \R$.
+
+\begin{example}
+Suppose we want to predict the price of a flat. Each flat can be encoded by a
+feature vector
+\[
+x = \big( [\text{surface in m}^2],\ [\text{number of rooms}],\ [\text{floor}],\ \dots \big) \in \R^d ,
+\]
+and the response $y \in \R$ is its price. Each coordinate of $x$ is a
+\emph{feature} (also called \emph{covariate} or \emph{explanatory variable}),
+and $d$ is the number of features.
+\end{example}
+
+We are given a \emph{training set} of $n$ pairs
+\[
+(x_1, y_1), \dots, (x_n, y_n) \in \R^d \times \R ,
+\]
+where $n$ is the number of training samples and $d$ the dimension of each data
+point. As in the rest of these notes, we stack the inputs into the
+\emph{design matrix} and the outputs into a single vector:
+\[
+X = \begin{pmatrix}
+- & x_1 & - \\
+  & \vdots &  \\
+- & x_n & -
+\end{pmatrix} \in \R^{n \times d},
+\qquad
+y = (y_1, \dots, y_n) \in \R^n .
+\]
+
+\begin{remark}[Encoding non-numerical features]
+We have implicitly assumed that each input is a vector of real numbers,
+$x \in \R^d$. In practice many features are \emph{categorical} rather than
+continuous: a person's sex (\texttt{male}/\texttt{female}), a colour, a city,
+etc. We turn them into numbers as follows.
+\begin{itemize}
+    \item A \emph{binary} feature can be encoded by a single $-1/1$ indicator, e.g.\
+    $\texttt{male} \mapsto -1$ and $\texttt{female} \mapsto 1$.
+    \item A categorical feature with $K \geq 3$ possible values should
+    \emph{not} simply be mapped to $1, 2, \dots, K$: this would invent a
+    spurious order and notion of distance between categories (it would suggest
+    that ``city $3$'' lies between ``city $2$'' and ``city $4$''). Instead one
+    uses \emph{one-hot} (or \emph{dummy}) encoding: the feature is replaced by
+    $K$ binary features, exactly one of which equals $1$. For example the colour
+    $\{\texttt{red}, \texttt{green}, \texttt{blue}\}$ becomes
+    \[
+    \texttt{red} \mapsto (1,0,0), \quad
+    \texttt{green} \mapsto (0,1,0), \quad
+    \texttt{blue} \mapsto (0,0,1) .
+    \]
+    One might object that for $K = 2$ the one-hot encoding does not give back the "$-1/1$"
+    encoding of the previous item. It in fact does; as explained later in the notes.
+\end{itemize}
+After such an encoding every input is again a genuine vector $x \in \R^d$, and
+the whole framework below applies unchanged.
+\end{remark}
+
+The goal is to \emph{learn} a function $f : \X \to \R$ such that
+\[
+f(x) \approx y \qquad \text{for unseen pairs } (x, y).
+\]
+Once such an $f$ is found, we can predict the response of a brand new input
+$x$ simply by evaluating $f(x)$.
+
+\paragraph{What do we need to specify?}
+Turning the vague wish ``$f(x) \approx y$'' into a well-posed problem requires
+two ingredients:
+\begin{enumerate}
+    \item a \emph{class of functions} $\F$ in which we look for $f$ (e.g.\ all
+    linear functions of $x$);
+    \item a way to \emph{quantify} how good a candidate $f$ is on the data,
+    i.e.\ a \emph{loss function}.
+\end{enumerate}
+
+\subsection{Choosing the function class}
+\label{subsec:function-class}
+
+The function class $\F$ collects all the candidate predictors we are willing to
+consider. In practice we never search over an abstract set of functions:
+instead we fix a \emph{parametrisation}, that is, we describe every candidate by
+a finite vector of \emph{parameters} (or \emph{weights}) $w \in\R^p$ (where $p$ corresponds to the number of trainable parameters) and denote
+the corresponding predictor by $f_w$. The function class is then
+\[
+\F = \big\{\, f_w \ : \ w \in \R^p \,\big\},
+\]
+and \emph{learning the function reduces to searching for a good parameter}
+$w$.  How $w$ enters $f_w$ is a modelling choice; here are the main examples. (For
+the linear models that occupy the rest of these notes the parameter has exactly one
+coordinate per feature, so it lives in the same $\R^d$ as the inputs; the last two
+examples below are parametrised differently, and there $w$ simply collects however
+many weights the model has.)
+
+\paragraph{Linear in the input.}
+The simplest choice makes the prediction a linear function of the input,
+\[
+f_w(x) = \langle w, x \rangle = \sum_{j=1}^d w_j x_j , \qquad w \in \R^d ,
+\]
+so that the parameter $w$ has the same dimension $d$ as the input $x$ (i.e., $p = d$).
+
+
+\paragraph{Nonlinear in the parameters.}
+Nothing forces $w$ to enter linearly. One may equally consider parametrisations
+in which the parameter appears \emph{inside} a nonlinear function: the resulting objective is non-convex in $w$, and must be tackled by
+iterative optimisation (e.g.\ gradient descent), with no guarantee of reaching a
+global minimum. The most prominent examples are neural networks.
+
+\paragraph{Neural networks.}
+A prominent and very expressive parametrisation that is nonlinear in $w$ is a
+\emph{neural network}. In its simplest, one-hidden-layer form,
+\[
+f_w(x) = \sum_{k=1}^m a_k \, \sigma\big( \langle b_k, x\rangle + c_k \big),
+\]
+where $\sigma$ is a fixed nonlinearity (e.g.\ a ReLU or a sigmoid) and the
+parameters $w = (a_k, b_k, c_k)_{k=1}^m$ gather all the weights. Increasing the
+width $m$ (or stacking several such layers) yields an extremely rich
+function class. The price to pay is, once more, a highly non-convex dependence
+on $w$, which is the central difficulty of modern deep learning. 
+
+
+\subsection{Choosing the loss function}
+
+Fixing a function class is not enough: we still need to say what it means for a
+prediction to be \emph{good}. This is the role of a \emph{loss function}
+$\ell(\hat{y}, y)$, which quantifies how much we penalise predicting
+$\hat{y} = f(x)$ when the true response is $y$. Averaging the loss over the
+training set gives the \emph{empirical risk}, which we view as a function of the
+parameter $w$ and denote
+\[
+L(w) = \frac{1}{n} \sum_{i=1}^n \ell\big( f_w(x_i), y_i \big).
+\]
+\emph{Empirical risk minimisation} then consists in choosing the parameter $w$
+(equivalently, $f_w \in \F$) so as to make $L(w)$ as small as possible.
+
+\begin{remark}[The constant $1/n$ does not matter for the minimiser]
+Multiplying an objective by a positive constant does not move its minimisers:
+for any $c > 0$, $\argmin_w c\, L(w) = \argmin_w L(w)$.
+In particular the factor $1/n$ in front of the sum is immaterial when our only
+goal is to \emph{locate} the best $w$. We nonetheless keep it throughout these
+notes, because it makes $L(w)$ an \emph{average} loss per sample rather than a
+total: its scale then does not grow with the size of the training set, and losses
+computed on datasets of different sizes remain comparable. Be aware, though, that
+the constant \emph{does} rescale the gradient $\nabla L$, and hence matters once a
+step size enters the picture, as in gradient descent below. (The extra $\tfrac12$
+that will appear for the squared error is a separate matter: it belongs to the
+loss $\ell$ itself and is there only to cancel the $2$ coming from the derivative.)
+\end{remark}
+
+\paragraph{Several ways to penalise an error.}
+The choice of $\ell$ is itself a modelling decision: different losses encode
+different ideas of what a good fit is. A few common choices are
+\begin{itemize}
+    \item the \emph{squared error} $\ell(\hat{y}, y) = \tfrac{1}{2}(\hat{y} - y)^2$,
+    by far the most common, which strongly penalises large residuals;
+    \item the \emph{absolute error} $\ell(\hat{y}, y) = |\hat{y} - y|$, more
+    robust to outliers but non-differentiable at~$0$;
+    \item the \emph{Huber loss}, a compromise that is quadratic for small
+    residuals and linear for large ones.
+\end{itemize}
+In the remainder of this section we focus on the squared error, which, when
+combined with a model that is linear in $w$, yields the particularly clean
+\emph{least-squares} problem.
+
+\begin{remark}[Training error is not the goal]
+Making the empirical risk small only guarantees that $f$ fits the
+\emph{training} data. What we actually care about is the \emph{test error},
+i.e.\ how well $f$ predicts on new, unseen inputs. A function can fit the
+training set perfectly and still generalise poorly.
+\end{remark}
+
+
+\subsection{Minimising the empirical risk}
+
+Choosing a function class and a loss has turned learning into an optimisation
+problem:
+\[
+w^\star \in \argmin_{w \in \R^p} \ L(w),
+\]
+where $\argmin_w L(w)$ denotes the set of parameters at which $L$
+attains its minimum, which is not necessarily unique (and may not even exist as we will see later on in the classification setting).
+
+For most models and losses there is no formula for the minimiser, so we
+approximate $w^\star$ by an \emph{iterative} method that only needs to evaluate
+gradients of $L$. The basic idea is \emph{gradient descent}: from some starting
+point $w_0$, repeatedly take a small step opposite to the gradient,
+\[
+w_{t+1} = w_t - \gamma\, \nabla L(w_t),
+\]
+and its cheaper \emph{stochastic} variant, which at each step uses the gradient at
+only a few sampled data points. We will come back to both in detail in
+\Cref{subsec:gd}; for now it is enough to keep in mind that minimising $L$
+is generally done by such gradient-based iteration.
+
+
+\section{Least squares}
+\label{sec:least-squares}
+
+We now specialise the two ingredients above to the simplest case:
+\[
+f_w(x) = \langle w, x \rangle = \sum_{j=1}^d w_j x_j , \qquad w \in \R^d ,
+\]
+together with the squared-error loss. The function class is thus
+\[
+\F = \big\{\, x \mapsto \langle w, x \rangle \ : \ w \in \R^d \,\big\} .
+\]
+
+\begin{remark}[Adding an intercept]
+Often we want an \emph{affine} predictor $f(x) = \langle w, x \rangle + b$ with
+an intercept (or bias) $b \in \R$, so that $f(0) \neq 0$ is allowed. This fits
+into the same framework: simply append a constant coordinate equal to $1$ to
+each input, $\tilde{x} = (x, 1) \in \R^{d+1}$, and a coordinate $b$ to the
+weights, $\tilde{w} = (w, b) \in \R^{d+1}$. Then
+$\langle \tilde{w}, \tilde{x}\rangle = \langle w, x \rangle + b$, and we are
+back to a purely linear model in dimension $d+1$. For this reason we keep the
+notation $f_w(x) = \langle w, x \rangle$ below without loss of generality.
+\end{remark}
+
+\paragraph{The least-squares objective.}
+Plugging the linear model into the empirical risk with the square loss, learning amounts to
+minimising over $w \in \R^d$ the function
+\[
+L(w) = \frac{1}{2n} \sum_{i=1}^n \big( \langle w, x_i \rangle - y_i \big)^2
+     = \frac{1}{2n} \, \Vert X w - y \Vert^2 ,
+\]
+where the second equality follows from stacking the residuals
+$\langle w, x_i\rangle - y_i$ into the vector $Xw - y \in \R^n$. 
+
+\begin{remark}
+Notice that $L$ is a positive function, and that $L(w) = 0$ if and only if $X w = y$, i.e. if and only if the vector $w$ perfectly fits the dataset: $\langle x_i, w \rangle = y_i$ for all $i \in \{1, \dots, n\}$.
+\end{remark}
+
+\noindent
+The problem
+\[
+w^\star \in \argmin_{w \in \R^d} \ \frac{1}{2n}\, \Vert X w - y \Vert^2
+\]
+is called the \emph{least-squares} problem.
+
+\begin{exercise}[$\star \star$]
+Check that we indeed have that 
+\[
+\frac{1}{2n} \sum_{i=1}^n \big( \langle w, x_i \rangle - y_i \big)^2
+   = \frac{1}{2n} \, \Vert X w - y \Vert^2 .
+\]
+Then write $L$ as an explicit quadratic in $w$:
+\[
+L(w) = \tfrac{1}{2n}\, w^\top X^\top X\, w - \tfrac{1}{n}\, w^\top X^\top y + \tfrac{1}{2n}\, \Vert y \Vert^2 .
+\]
+Deduce that $\nabla L(w) = \tfrac{1}{n}\, X^\top (X w - y)$ and that the Hessian is
+$\nabla^2 L(w) = \tfrac{1}{n}\, X^\top X$, independently of $w$.
+\end{exercise}
+
+\paragraph{Solving the least squares problem.}
+The function $L$ is convex (it is a quadratic with positive semi-definite
+Hessian $\tfrac{1}{n} X^\top X \succeq 0$, see \Cref{sec:cheat-convexity}), so any
+point where the gradient vanishes is a global minimum. Computing the gradient of $L$ (see
+\Cref{sec:cheat-linalg}) leads to:
+\[
+\nabla L(w) = \tfrac{1}{n}\, X^\top (X w - y) .
+\]
+Setting $\nabla L(w^\star) = 0$, the factor $\tfrac{1}{n}$ cancels and we obtain the
+\emph{normal equations}
+\[
+\ X^\top X \, w^\star = X^\top y  .
+\]
+
+\noindent
+From here, we distinguish two different settings:
+\begin{itemize}
+    \item The \emph{under-parametrised} setting (sometimes called the \textit{over-determined} setting), where there are fewer trainable parameters than data samples, i.e.\ $d \leq n$. In this setting, we will see that the normal equations admit a \emph{unique} solution\footnote{Under the mild assumption that $X$ has full column rank.}, and hence $L$ has a unique global minimiser.
+    \item The \emph{over-parametrised} setting (sometimes called the \textit{under-determined} setting), where there are more trainable parameters than data samples, i.e.\ $d > n$. In this setting, we will see that the normal equations admit \emph{infinitely many} solutions, and hence $L$ has infinitely many global minimisers.
+\end{itemize}
+
+\subsection{Underparametrised setting ($n \geq d$): a unique solution}
+\label{subsec:underparam}
+
+Solving the normal equations for $w^\star$ requires inverting $X^\top X \in
+\R^{d\times d}$, so before stating the closed-form solution we need to
+understand when this is possible.
+
+\paragraph{In the underparametrised setting, $X^\top X$ is (nearly always) invertible.}
+From \Cref{app:lemma:rank-XX-X}, we have that $X^\top X$ is invertible if and only if $X$ has full column rank, i.e. if and only if $\spn(x_1, \dots, x_n) = \R^d$. This means that the inputs must span the whole $\R^d$ space, hence $n \geq d$. In fact, one can show that for ``nearly all'' datasets for which $n \geq d$, it holds that $\rank(X) = d$ and hence $X^\top X$ is invertible (see \Cref{subsec:cheat-rank} for more details). 
+
+\begin{prop}[Closed-form solution]\label{prop:closed-form-LS}
+Assuming that $\spn(x_1, \dots, x_n) = \R^d$, then $X^\top X \in \R^{d \times d}$ is invertible and the least-squares problem
+has a unique minimiser, given by
+\[
+w^\star = (X^\top X)^{-1} X^\top y .
+\]
+\end{prop}
+
+\paragraph{Geometric interpretation.}
+The vector of predictions $X w$ ranges, as $w$ varies over $\R^d$, exactly over
+the column space $\spn(\text{columns of } X) \subseteq \R^n$. Minimising
+$\Vert Xw - y\Vert$ therefore means finding the point of this subspace that is
+\emph{closest} to $y$: the optimal prediction $X w^\star$ is the
+\emph{orthogonal projection} of $y$ onto the column space of $X$.
+Equivalently, the residual $X w^\star - y$ is orthogonal to every column of
+$X$, which is precisely the statement of the normal equations
+$X^\top (X w^\star - y) = 0$.
+
+
+\begin{exercise}[$\star\star$]
+Assume $X^\top X$ is invertible, show that $L$ can be rewritten around its global
+minimiser $w^\star$ as:
+\[
+L(w) = L(w^\star) + \tfrac{1}{2n}\, \big\Vert X (w - w^\star) \big\Vert^2.
+\]
+\end{exercise}
+
+
+
+
+\subsection{Overparametrised setting ($d > n$): an infinite space of solutions}
+\label{subsec:overparam}
+
+We now consider the overparametrised setting where $d > n$. In this case $X^\top X$ cannot be inverted, so we solve the normal equations differently. 
+
+\paragraph{Generic interpolation.}
+In the overparametrised setting where $d > n$\footnote{in fact, all of the following also holds for $d=n$}, the inputs $x_1, \dots, x_n$ can span a linear subspace of $\R^d$ of dimension at most $n$. In fact, if they are linearly independent (which holds for almost all datasets, see \Cref{subsec:cheat-rank}), then their span is of dimension exactly $n$, which means that $\rank(X) = n$. This observation leads to the following proposition.
+
+\begin{prop}[Zero training error]
+If the inputs $x_1, \dots, x_n$ are linearly independent (which requires $d \geq n$), then $\rank(X) = n$ and the linear map
+\[
+X : \R^d \to \R^n, \qquad w \mapsto Xw
+\]
+is surjective. Hence for \emph{every} response vector $y \in \R^n$ there exists at least one
+weight $w^\star$ with $Xw^\star = y$. This means that $y_i = \langle x_i, w^\star \rangle$ for all $i \in [n]$, which means that the
+training data is fitted perfectly. Also note that this means that $L(w^\star) = \tfrac{1}{2n}\Vert Xw^\star - y\Vert^2 = 0$, hence that $w^\star \in \arg\min L$.
+\end{prop}
+
+
+
+
+
+
+\paragraph{The minimisers form an affine space.}
+As soon as one interpolating weight exists the set of global
+minimisers of $L$ is \emph{exactly} the set of interpolants,
+\[
+S = \big\{\, w \in \R^d \ : \ Xw = y \,\big\} .
+\]
+This is an \emph{affine subspace} of $\R^d$. Now let $w^\star$ be any particular
+solution ($X w^\star = y$), then any other solution $w$ such that $Xw = y$ is equivalent to $X (w - w^\star) = 0$, which means that $\langle x_i, w - w^\star \rangle = 0$ for every $i$. Hence $w - w^\star$ is orthogonal to every input, that is, $w - w^\star \in \spn(x_1, \dots, x_n)^{\perp}$. Hence 
+\[
+S = w^\star + \spn(x_1, \dots, x_n)^{\perp}.
+\]
+Now assuming that the inputs are linearly independent, then the dimension of the affine space $S$ is equal to $d-n$. In other words, there is a whole $(d-n)$-dimensional affine space of weights achieving
+zero training error.
+
+
+\paragraph{The minimum-norm solution.}
+Because the whole affine space $S$ is optimal for the training loss, we need an
+extra criterion to pick a single predictor. A natural and very common choice is
+the \emph{minimum-norm} interpolant, i.e. the point of $S$ closest to the origin:
+\[
+w^\dagger = \argmin_{w \,:\, Xw = y} \ \Vert w \Vert .
+\]
+
+\begin{prop}[Minimum-norm solution]
+If $\rank(X) = n$, then $XX^\top \in \R^{n \times n}$ is invertible and
+\[
+w^\dagger = X^\top (XX^\top)^{-1} y
+\]
+is the unique minimum-norm solution of $Xw = y$.
+\end{prop}
+
+\begin{proof}[Geometric proof]
+The idea is purely geometric: $w^\dagger$ is the orthogonal projection of the
+origin onto the affine space of interpolants, and Pythagoras does the rest. Recall
+that the set of minimisers of $L$ is the affine space
+\[
+S = \{\, w \in \R^d : Xw = y \,\} ,
+\]
+whose direction is the subspace $\spn(x_1, \dots, x_n)^\perp$.
+
+\emph{Step 1: $w^\dagger$ is an interpolant lying in $\spn(x_1, \dots, x_n)$.}
+Since $\rank(X) = n$, the matrix $XX^\top$ is invertible, so $w^\dagger = X^\top
+(XX^\top)^{-1} y$ is well defined and
+\[
+X w^\dagger = XX^\top (XX^\top)^{-1} y = y ,
+\]
+so $w^\dagger \in S$. Moreover, writing $u = (XX^\top)^{-1} y \in \R^n$, we have
+$w^\dagger = X^\top u = \sum_{i=1}^n u_i\, x_i$, so $w^\dagger \in \spn(x_1, \dots,
+x_n)$.
+
+\emph{Step 2: Pythagoras.}
+Let $w^\star \in S$ be an arbitrary interpolant, i.e.\
+$X w^\star = y$. Decompose it around $w^\dagger$ as
+\[
+w^\star = w^\dagger + h, \qquad h := w^\star - w^\dagger .
+\]
+Because $X w^\star = X w^\dagger = y$, the difference satisfies $X h = 0$, that is,
+$h \in \spn(x_1, \dots, x_n)^\perp$. But $w^\dagger \in \spn(x_1, \dots, x_n)$ by Step 1, so $w^\dagger$ and $h$
+are orthogonal, $\langle w^\dagger, h \rangle = 0$. The Pythagorean theorem then
+gives
+\[
+\Vert w^\star \Vert^2 = \Vert w^\dagger + h \Vert^2
+= \Vert w^\dagger \Vert^2 + \Vert h \Vert^2 \geq \Vert w^\dagger \Vert^2 ,
+\]
+so $\Vert w^\star \Vert \geq \Vert w^\dagger \Vert$ for every interpolant $w^\star$.
+Equality forces $\Vert h \Vert = 0$, i.e.\ $w^\star = w^\dagger$, which proves that
+$w^\dagger$ is the \emph{unique} minimum-norm interpolant.
+\end{proof}
+
+
+
+\begin{remark}[Two dual regimes]
+The formulas $w^\star = (X^\top X)^{-1} X^\top y$ (under-parametrised, $n \geq d$)
+and $w^\dagger = X^\top (XX^\top)^{-1} y$ (over-parametrised, $d > n$) are mirror
+images: in the first $X^\top X \in \R^{d \times d}$ is invertible and the solution
+is unique; in the second $XX^\top \in \R^{n \times n}$ is invertible while $X^\top
+X$ is singular, so the solution is only unique \emph{after} imposing the
+minimum-norm rule. Both are special cases of the \emph{Moore-Penrose
+pseudo-inverse} $X^+$, for which $w = X^+ y$ in either regime.
+\end{remark}
+
+\begin{exercise}[$\star$]
+In the boundary regime where $n = d$ with $\rank(X) = n = d$, prove that the under-parametrised and over-parametrised formulas match, i.e. that
+$(X^\top X)^{-1} X^\top y = X^\top (X X^\top)^{-1}y$.
+\end{exercise}
+
+% \begin{remark}[Interpolation is not the end of the story]
+% Fitting the training data perfectly says nothing about the \emph{test} error. In
+% the over-parametrised regime the choice of which interpolant we land on (here, the
+% minimum-norm one) is exactly what controls generalisation, a theme we return to
+% with the bias-variance trade-off.
+% \end{remark}
+
+
+\subsection{Gradient descent and stochastic gradient descent}
+\label{subsec:gd}
+
+The above equations give a closed-form solution to least squares, but computing
+them is not always practical, for two reasons.
+\begin{itemize}
+    \item \textbf{Cost.} In practice one does not compute the inverse
+    $(X^\top X)^{-1}$ (nor $(X X^\top)^{-1}$)  explicitly, which is both wasteful and numerically unstable.
+    The normal equations $X^\top X\, w = X^\top y$ form a linear system, and one
+    solves it directly, for instance by a Cholesky factorisation of the symmetric
+    positive definite matrix $X^\top X$, or, better conditioned, by a $QR$ factorisation or
+    an SVD of $X$ that avoids forming $X^\top X$ at all. The cost is nonetheless of
+    order $O(n d^2 + d^3)$. When the number of features $d$ is large, of the order
+    of thousands or millions as in modern models, this becomes prohibitive in both
+    time and memory, whichever method is used.
+    \item \textbf{Generality.} The closed form is special to the squared loss with
+    a model that is linear in $w$. As soon as we change the loss (absolute error,
+    Huber, \dots) or use a model that is nonlinear in $w$ (a neural network), there
+    is \emph{no} closed-form minimiser at all.
+\end{itemize}
+In both cases we give up on solving for $w$ exactly and instead compute an
+approximate minimiser \emph{iteratively}, using only gradients of $L$.
+
+\paragraph{Gradient descent.}
+Gradient descent (GD) starts from an arbitrary $w_0 \in \R^d$ and repeatedly takes
+a small step in the direction of steepest descent, i.e.\ opposite to the gradient:
+\[
+w_{t+1} = w_t - \gamma\, \nabla L(w_t), \qquad t = 0, 1, 2, \dots,
+\]
+where $\gamma > 0$ is the \emph{step size} (or \emph{learning rate}). The
+intuition is that $-\nabla L(w_t)$ points in the direction along which $L$
+decreases the most, so for a small enough $\gamma$ each step lowers the loss. For
+the least-squares objective the gradient was computed above,
+\[
+\nabla L(w) = \tfrac{1}{n}\, X^\top (X w - y),
+\]
+so one GD step costs a matrix-vector product with $X$ and with $X^\top$, that is
+$O(n d)$ operations, and requires no matrix inversion. Since $L$ is convex, GD with
+a suitable step size converges to a global minimiser.
+
+\begin{remark}[Choosing the step size]
+\label{rem:step-size}
+The step size $\gamma$ must be tuned. If $\gamma$ is too large the iterates can
+overshoot the minimum and even diverge; if it is too small the algorithm is
+stable but crawls, needing very many iterations. For least squares one can be
+precise, because the Hessian $\nabla^2 L = \tfrac{1}{n} X^\top X$ is a constant
+matrix. Write
+\[
+\beta \coloneqq \lambda_{\max}\big(\tfrac{1}{n} X^\top X\big) = \tfrac{1}{n}\lambda_{\max}(X^\top X)
+\]
+for its largest eigenvalue, the \emph{smoothness constant} of $L$. Then the iterates
+converge for every step size in the range
+\[
+0 < \gamma < \frac{2}{\beta} ,
+\]
+and diverge as soon as $\gamma > 2/\beta$;
+this is exactly the threshold appearing in
+\Cref{fact:gd-converges} below. The usual default is $\gamma = 1/\beta$, which sits
+comfortably inside the admissible range.
+\end{remark}
+
+\paragraph{A variational viewpoint on gradient descent.}
+Gradient descent looks like a purely mechanical rule, ``take a step against the
+gradient''. It is enlightening to notice that each step is in fact the solution of a
+small optimisation problem: at $w_t$ we do not minimise $L$ itself (which we cannot
+do in closed form), but a cheap \emph{surrogate} obtained by linearising $L$ around
+$w_t$ and forbidding ourselves from moving too far.
+
+\begin{prop}[GD as linearise-and-penalise]
+\label{prop:gd-variational}
+For any $w_t \in \R^d$ and step size $\gamma > 0$, the gradient descent update
+$w_{t+1} = w_t - \gamma\, \nabla L(w_t)$ is the unique minimiser of the surrogate
+objective
+\[
+w_{t+1} = \argmin_{w \in \R^d} \ \Big\{
+\underbrace{L(w_t) + \langle \nabla L(w_t),\, w - w_t \rangle}_{\text{linearisation of } L \text{ at } w_t}
+\ + \ \frac{1}{2\gamma} \Vert w - w_t \Vert^2 \Big\} .
+\]
+\end{prop}
+
+\begin{proof}
+The bracketed function is a strictly convex quadratic in $w$ (the linear part
+contributes nothing to the curvature, and the penalty $\tfrac{1}{2\gamma}\Vert w - w_t
+\Vert^2$ has positive-definite Hessian $\tfrac{1}{\gamma} I$), so it has a unique
+minimiser, found by cancelling its gradient:
+\[
+\nabla L(w_t) + \frac{1}{\gamma}\, (w - w_t) = 0
+\quad \Longleftrightarrow \quad
+w = w_t - \gamma\, \nabla L(w_t) . \qedhere
+\]
+\end{proof}
+
+So the step size $\gamma$ plays the role of a \emph{trust region}: a large $\gamma$
+weakens the proximity penalty and lets the step follow the linear model further,
+while a small $\gamma$ keeps $w_{t+1}$ close to $w_t$, where the linearisation is
+trustworthy.
+
+\begin{exercise}[$\star$]
+What recursion do we obtain if we keep the true loss $L$ instead of its
+linearisation, i.e.\ if we define $w_{t+1} = \argmin_{w} \big\{ L(w) +
+\tfrac{1}{2\gamma}\Vert w - w_t \Vert^2 \big\}$? (This is known as \emph{implicit}
+gradient descent, or the proximal point method.)
+\end{exercise}
+
+\paragraph{Stochastic gradient descent.}
+Even though GD avoids matrix inversion, every single step still evaluates the full
+gradient, which is a sum over all $n$ training points. Writing the empirical risk
+as a finite sum,
+\[
+L(w) = \frac{1}{n} \sum_{i=1}^n \ell_i(w), \qquad
+\ell_i(w) = \ell\big( f_w(x_i), y_i \big),
+\]
+we see that one full gradient $\nabla L(w) = \frac1n \sum_{i=1}^n \nabla \ell_i(w)$
+costs $O(n d)$, which is again expensive when the number of samples $n$ is huge.
+
+\emph{Stochastic gradient descent} (SGD) replaces the full gradient by the
+gradient at a \emph{single} training point, drawn at random. At each step one
+samples an index $i_t$ uniformly in $\{1, \dots, n\}$ and updates
+\[
+w_{t+1} = w_t - \gamma_t\, \nabla \ell_{i_t}(w_t).
+\]
+The key point is that this cheap direction is, on average, the right one:
+\[
+\E_{i_t}\big[ \nabla \ell_{i_t}(w_t) \big]
+   = \frac{1}{n} \sum_{i=1}^n \nabla \ell_i(w_t) = \nabla L(w_t),
+\]
+so $\nabla \ell_{i_t}(w_t)$ is an \emph{unbiased estimate} of the true gradient,
+obtained at cost $O(d)$ instead of $O(n d)$. For least squares the per-sample
+gradient is simply
+\[
+\nabla \ell_i(w) = \big( \langle w, x_i \rangle - y_i \big)\, x_i .
+\]
+
+\paragraph{The vocabulary you will meet in practice.}
+Two conventions surround SGD in every library, and they are worth naming.
+
+\emph{Mini-batches.} Rather than a single sample, one usually averages the gradient
+over a small \emph{mini-batch} $B_t \subseteq \{1, \dots, n\}$ of $B = |B_t|$ points
+drawn at random,
+\[
+w_{t+1} = w_t - \gamma_t \, \frac{1}{B} \sum_{i \in B_t} \nabla \ell_i(w_t) .
+\]
+This is still an unbiased estimate of $\nabla L(w_t)$, costs $O(Bd)$, and its variance
+is smaller by a factor $B$. The two extremes $B = 1$ and $B = n$ are plain SGD and
+plain GD, so $B$ interpolates between them, trading variance against cost per step.
+Typical values are $B = 32$ to $512$: large enough for the step to be a meaningful
+direction, small enough that many steps are taken per pass through the data.
+
+\emph{Epochs.} One \emph{epoch} is one full pass over the training set, that is
+$n / B$ steps. Training time is reported in epochs rather than in steps, because it is
+the number of times each data point has been looked at. In practice the mini-batches
+of an epoch are usually obtained by shuffling the $n$ indices once and cutting the
+result into blocks of size $B$ (sampling \emph{without} replacement), which is
+marginally biased compared with the idealised uniform sampling above, but simpler and
+slightly more efficient.
+
+
+\begin{exercise}[$\star$]
+What is the analogue of \Cref{prop:gd-variational} for SGD? That is, which
+surrogate objective does the SGD update $w_{t+1} = w_t - \gamma\, \nabla
+\ell_{i_t}(w_t)$ minimise at each step?
+\end{exercise}
+
+\paragraph{Implicit bias of gradient descent.}
+In the over-parametrised regime $d > n$ there is a whole affine space of
+minimisers of $L$, and it is a priori unclear which one will be recovered by gradient descent. To answer this question, the crucial observation is that \emph{every gradient of $L$ lives in
+the span of the data}. Indeed,
+\[
+\nabla L(w) = \tfrac{1}{n} X^\top (X w - y) = \tfrac{1}{n} \sum_{i=1}^n
+\big( \langle w, x_i \rangle - y_i \big)\, x_i \ \in \ \spn(x_1, \dots, x_n).
+\]
+Write $V \coloneqq
+\spn(x_1, \dots, x_n)$ for this subspace.
+
+Throughout, we take for granted the following statement. It is a genuine
+\emph{theorem}, not a hypothesis on the data: it can be but it lies outside the scope of this class, so we simply admit it here.
+
+\begin{fact}[Convergence of the iterates, admitted]
+\label{fact:gd-converges}
+For the least-squares loss and a small enough step size (any $0 < \gamma < 2/\beta$
+with $\beta = \tfrac1n \lambda_{\max}(X^\top X)$ the largest eigenvalue of the
+Hessian), the gradient descent iterates converge to some limit $w_\infty =
+\lim_{t \to \infty} w_t$.
+\end{fact}
+
+\begin{prop}[Implicit bias of GD]
+Let $(w_t)_{t \geq 0}$ be the gradient descent iterates $w_{t+1} = w_t - \gamma\,
+\nabla L(w_t)$ on the least-squares loss $L$, started at $w_0 \in \R^d$, and let
+$w_\infty$ be their limit. Then:
+\begin{enumerate}
+    \item $w_\infty$ is a minimiser of $L$;
+    \item among \emph{all} minimisers of $L$, the point $w_\infty$ is the one closest
+    to the starting point $w_0$, that is, the orthogonal projection of $w_0$ onto the
+    set of solutions:
+    \[
+    w_\infty = \argmin_{w \in S}\ \Vert w - w_0 \Vert .
+    \]
+    In particular, starting from $w_0 = 0$ recovers the minimum-norm solution
+    $w^\dagger$.
+\end{enumerate}
+\end{prop}
+
+\begin{proof}[Geometric proof]
+\emph{(1) The iterates stay in $w_0 + V$.} Each gradient $\nabla L(w_t)$ lies in
+$V$ by the observation above, so $w_{t+1} - w_t = -\gamma\, \nabla L(w_t) \in V$. By
+induction $w_t - w_0 \in V$ for every $t$, i.e.\ $w_t \in w_0 + V$. Since $V$ is a
+closed subspace, the limit inherits the property: $w_\infty \in w_0 + V$.
+
+\emph{(2) $w_\infty$ is a minimiser.} This is the only place the convergence
+assumption is used. Passing to the limit in the update $w_{t+1} = w_t - \gamma\,
+\nabla L(w_t)$ and using continuity of $\nabla L$, the limit is a fixed point,
+$w_\infty = w_\infty - \gamma\, \nabla L(w_\infty)$, which forces $\nabla L(w_\infty)
+= 0$. As $L$ is convex, this means $w_\infty \in \argmin L =: S$, the
+set of solutions of the normal equations. Recall that $S$ is an affine space with
+direction $V^\perp$.
+
+\emph{(3) Pythagoras.} Let $w^\star \in S$ be any minimiser. Both $w_\infty$ and
+$w^\star$ lie in $S$, whose direction is $V^\perp$, so $w_\infty - w^\star
+\in V^\perp$. On the other hand $w_\infty - w_0 \in V$ by part (1). These two vectors
+are therefore orthogonal, and Pythagoras gives
+\[
+\Vert w^\star - w_0 \Vert^2
+= \Vert \underbrace{(w^\star - w_\infty)}_{\in\, V^\perp}
+      + \underbrace{(w_\infty - w_0)}_{\in\, V} \Vert^2
+= \Vert w^\star - w_\infty \Vert^2 + \Vert w_\infty - w_0 \Vert^2
+\ \geq\ \Vert w_\infty - w_0 \Vert^2 .
+\]
+Thus $w_\infty$ minimises the distance to $w_0$ over all minimisers, with equality
+only when $w^\star = w_\infty$: it is the orthogonal projection of $w_0$ onto $S$.
+\end{proof}
+
+This is what is meant by the \emph{implicit bias} (or \emph{implicit
+regularisation}) of gradient descent: although the loss $L$ is blind to the choice
+of interpolant, the optimisation algorithm is not, and it silently selects the
+solution closest to its initialisation.
+
+\begin{exercise}[$\star$]
+What happens for SGD? And what if the loss $\ell$ is not the square norm, but some
+other coercive loss?
+\end{exercise}
+
+
+\subsection{Ridge regression (weight decay)}
+\label{subsec:ridge}
+
+The implicit bias of gradient descent selects a solution \emph{implicitly}, through
+the dynamics of the algorithm. Ridge regression does the same thing
+\emph{explicitly}, by adding a penalty to the loss itself that discourages large
+weights. One augments the least-squares objective with an $\ell_2$ penalty (called
+\emph{weight decay} in the deep-learning community),
+\[
+L_\lambda(w) = \underbrace{\frac{1}{2n}\Vert X w - y \Vert^2}_{L(w)}
+\ + \ \frac{\lambda}{2}\Vert w \Vert^2 ,
+\]
+where $\lambda > 0$ is the \emph{regularisation strength}. The extra term pulls the
+solution towards the origin; the larger $\lambda$, the stronger the pull.
+
+\begin{remark}[Two practical warnings: the intercept and the scale of the features]
+Unlike everything that came before, the penalty $\Vert w \Vert^2$ is \emph{not}
+invariant under the harmless-looking reparametrisations we have been allowing
+ourselves, and this has two concrete consequences.
+\begin{itemize}
+    \item \emph{Do not penalise the intercept.} Recall that we absorbed an intercept
+    $b$ into $w$ by appending a constant coordinate $1$ to each input. If we now
+    penalise the whole of $\Vert w \Vert^2$, we are also shrinking $b$ towards $0$,
+    which amounts to saying that a response centred around $1000$ is somehow less
+    plausible than one centred around $0$: the fit would change if we merely chose to
+    measure $y$ in different units, or from a different origin. In practice one
+    therefore penalises only the genuine weights, minimising
+    $\tfrac{1}{2n}\Vert Xw + b\mathbf{1} - y\Vert^2 + \tfrac{\lambda}{2}\Vert w\Vert^2$,
+    or equivalently centres $y$ and the columns of $X$ beforehand and drops the
+    intercept altogether.
+    \item \emph{Standardise the features first.} A single penalty $\lambda$ is applied
+    to every coordinate of $w$, but the coordinates of $x$ need not be comparable: a
+    surface in $\text{m}^2$ and a surface in $\text{km}^2$ differ by a factor $10^6$,
+    and the corresponding weight by a factor $10^{-6}$. Ridge would then penalise the
+    two encodings of the \emph{same} model completely differently, whereas ordinary
+    least squares is entirely insensitive to such a rescaling. The remedy, and the
+    other reasons for applying it, are collected in \Cref{subsec:standardise}.
+\end{itemize}
+Below we ignore both points and penalise $\Vert w \Vert^2$ as written, which keeps
+the formulas clean; just remember to centre and standardise before applying them.
+\end{remark}
+
+Unlike plain least squares, ridge regression
+always has a \emph{unique} solution, even in the over-parametrised regime $d > n$
+where $X^\top X$ is not invertible.
+
+\begin{prop}[Existence, uniqueness, closed form]
+For every $\lambda > 0$ the objective $L_\lambda$ is strictly convex and coercive, so
+it admits a \emph{unique} minimiser
+\[
+w^\star_\lambda = \big( X^\top X + n\lambda I \big)^{-1} X^\top y ,
+\]
+which is well defined for \emph{any} $X \in \R^{n \times d}$, whatever the relative
+sizes of $n$ and $d$.
+\end{prop}
+
+\begin{proof}
+The Hessian of $L_\lambda$ is $\nabla^2 L_\lambda = \tfrac{1}{n} X^\top X + \lambda I
+\succeq \lambda I \succ 0$, so $L_\lambda$ is strictly convex (see
+\Cref{sec:cheat-convexity}); and $L_\lambda(w) \geq \tfrac{\lambda}{2}\Vert w
+\Vert^2 \to \infty$ as $\Vert w \Vert \to \infty$, so it is coercive and its infimum
+is attained. A strictly convex function has at most one minimiser, hence exactly one
+here. Cancelling the gradient,
+\[
+\nabla L_\lambda(w) = \tfrac{1}{n} X^\top (X w - y) + \lambda w = 0
+\quad \Longleftrightarrow \quad
+\big( X^\top X + n\lambda I \big)\, w = X^\top y .
+\]
+Finally $X^\top X + n\lambda I$ is positive definite (its eigenvalues are $\geq
+n\lambda > 0$), hence invertible, which gives the announced formula.
+\end{proof}
+
+It is worth noting that $w^\star_\lambda$ always lies in the span of the data: from
+the optimality condition, $w^\star_\lambda = \tfrac{1}{n\lambda} X^\top (y - X
+w^\star_\lambda) \in \spn(x_1, \dots, x_n)$.
+
+\paragraph{The two extremes.}
+The parameter $\lambda$ interpolates between two meaningful limits: crank it up and
+the penalty dominates, killing the weights; send it to zero and we recover ordinary
+least squares, more precisely its minimum-norm solution.
+
+\begin{prop}[Limits in $\lambda$]
+Let $w^\dagger$ denote the minimum-norm minimiser of $L$ (the orthogonal projection
+of $0$ onto the affine set $S = \argmin L$). Then
+\[
+\lim_{\lambda \to +\infty} w^\star_\lambda = 0
+\qquad \text{and} \qquad
+\lim_{\lambda \to 0^+} w^\star_\lambda = w^\dagger .
+\]
+\end{prop}
+
+\begin{proof}
+\emph{Limit $\lambda \to \infty$.} Comparing the optimal value with the one at $w =
+0$,
+\[
+\tfrac{\lambda}{2}\Vert w^\star_\lambda \Vert^2 \leq L_\lambda(w^\star_\lambda)
+\leq L_\lambda(0) = L(0) = \tfrac{1}{2n}\Vert y \Vert^2 ,
+\]
+so $\Vert w^\star_\lambda \Vert^2 \leq \Vert y \Vert^2 / (n\lambda) \to 0$.
+
+\emph{Limit $\lambda \to 0^+$.} By optimality of $w^\star_\lambda$ for $L_\lambda$,
+tested against $w^\dagger$,
+\[
+L(w^\star_\lambda) + \tfrac{\lambda}{2}\Vert w^\star_\lambda \Vert^2
+\ \leq\ L(w^\dagger) + \tfrac{\lambda}{2}\Vert w^\dagger \Vert^2 .
+\tag{$\ast$}
+\]
+Since $w^\dagger$ minimises $L$, we have $L(w^\star_\lambda) \geq L(w^\dagger)$, and
+($\ast$) gives $\Vert w^\star_\lambda \Vert \leq \Vert w^\dagger \Vert$: the family is
+bounded. Rearranging ($\ast$) also gives $0 \leq L(w^\star_\lambda) - L(w^\dagger)
+\leq \tfrac{\lambda}{2}\Vert w^\dagger \Vert^2 \to 0$, so $L(w^\star_\lambda) \to \min
+L$. Now let $\bar w$ be the limit of any convergent subsequence $w^\star_{\lambda_k}$
+(one exists, by boundedness). By continuity $L(\bar w) = \min L$, so $\bar w \in S$,
+and $\Vert \bar w \Vert \leq \Vert w^\dagger \Vert$. But $w^\dagger$ is the
+\emph{unique} element of $S$ of minimal norm, so $\bar w = w^\dagger$. Every
+convergent subsequence thus has the same limit $w^\dagger$, and since the family is
+bounded, $w^\star_\lambda \to w^\dagger$.
+\end{proof}
+
+\begin{remark}[Two roads to the same solution]
+The limit $\lambda \to 0^+$ is remarkable: it recovers exactly the minimum-norm solution $w^\dagger$ that gradient descent from $w_0 = 0$ finds through its implicit
+bias. Explicit regularisation (ridge, taken to the zero-penalty limit) and implicit
+regularisation (gradient descent) therefore lead to the \emph{same} predictor. This
+is one of the cleanest illustrations of why $w^\dagger$ is the ``natural'' least-squares
+solution in the over-parametrised regime.
+\end{remark}
+
+\subsection{Feature expansion}
+\label{subsec:features}
+
+\paragraph{A linear model can be a curved function.}
+Models which are linear in the input data $x$ are often too rigid. A flexible remedy is to transform the input using a \emph{chosen} (as opposed to learnt) transformation $\phi$. Such a function is often called a \emph{feature map}:
+\[
+\phi : \R^{d} \to \R^{d'}, \qquad x \mapsto \phi(x) = \big( \phi_1(x), \dots, \phi_{d'}(x) \big),
+\]
+which sends the raw input, living in its native dimension $d$, to a vector of
+$d'$ new features. After this \emph{feature augmentation}, one wants to learn a linear model of these features:
+\[
+f_w(x) = \langle w, \phi(x) \rangle,
+\qquad w \in \R^{d'} .
+\]
+The number of features $d'$ is ours to choose, and it may be larger, sometimes
+much larger, than the raw input dimension $d$.
+
+\begin{example}[Polynomial features]
+\label{ex:poly-features}
+For a scalar input $z \in \R$ (so $d = 1$), the feature map
+$\phi(z) = (1, z, z^2, \dots, z^k) \in \R^{k+1}$ turns the model into a
+degree-$k$ polynomial
+\[  
+f_w(z) = w_0 + w_1 z + \dots + w_k z^k ,
+\]
+built out of $d' = k+1$ features. The predictor is now a \emph{nonlinear}
+function of $z$, yet it remains a \emph{linear} function of the parameter $w$.
+\end{example}
+
+
+
+
+\paragraph{Everything happens as if the data had been transformed once and for all.}
+Transform each input once, before doing anything else, and call the result
+$\tilde{x}_i = \phi(x_i) \in \R^{d'}$. We are then fitting the plain linear
+model $\tilde{x} \mapsto \langle w, \tilde{x} \rangle$ on the dataset
+$(\tilde{x}_1, y_1), \dots, (\tilde{x}_n, y_n)$, whose design matrix stacks the
+\emph{transformed} inputs:
+\[
+\tilde{X} = \begin{pmatrix}
+- & \tilde{x}_1 & - \\
+  & \vdots &  \\
+- & \tilde{x}_n & -
+\end{pmatrix} = \begin{pmatrix}
+- & \phi(x_1) & - \\
+  & \vdots &  \\
+- & \phi(x_n) & -
+\end{pmatrix} \in \R^{n \times d'},
+\qquad
+y = (y_1, \dots, y_n) \in \R^n .
+\]
+The empirical risk is then
+\[
+L(w) = \frac{1}{2n} \sum_{i=1}^n \big( \langle w, \phi(x_i) \rangle - y_i \big)^2
+ = \frac{1}{2n} \sum_{i=1}^n \big( \langle w, \tilde{x}_i \rangle - y_i \big)^2
+     = \frac{1}{2n} \big\Vert \tilde{X} w - y \big\Vert^2 ,
+\]
+which is word for word the least-squares problem of \Cref{sec:least-squares},
+with $\tilde{X}$ in place of $X$ and $d'$ in place of $d$. Normal equations,
+closed-form solution, minimum-norm interpolant, gradient descent and its
+implicit bias, ridge regression: not one of these formulas ever cares whether
+the rows of the design matrix were transformed beforehand. 
+
+
+\paragraph{Under and over-parametrisation with polynomial expansion.}
+Feature augmentation lets us increase $d'$ freely, and polynomial features are
+the cleanest way to see what happens as $d'$ crosses $n$, the number of
+training points. For a scalar input $z \in \R$, write $\phi^{(k)}$ for the
+feature map of degree $k$,
+\[
+\phi^{(0)}(z) = (1), \quad
+\phi^{(1)}(z) = \begin{pmatrix} 1 \\ z \end{pmatrix}, \quad
+\phi^{(2)}(z) = \begin{pmatrix} 1 \\ z \\ z^2 \end{pmatrix}, \quad \dots, \quad
+\phi^{(k)}(z) = \begin{pmatrix} 1 \\ z \\ \vdots \\ z^k \end{pmatrix} \in \R^{k+1} .
+\]
+A degree-$k$ polynomial model therefore works in
+dimension $d' = k+1$, and nothing stops us from taking $d'$ as large as we like. Given $n$
+training points $(z_1, y_1), \dots, (z_n, y_n)$ with distinct abscissae $z_i \in \R$, three regimes appear:
+\begin{itemize}
+    \item \emph{(Strictly) under-parametrised setting $d' < n$ (polynomials of degree less than $n - 1$)}: it is highly unlikely to be able to exactly pass through $n$ points with a polynomial of degree less than $n - 1$. There exists a unique polynomial which minimises the square error.
+    \item \emph{Boundary $d' = n$ (polynomials of degree $n - 1$)}: there exists a unique polynomial of degree $(n-1)$ passing through all of the points exactly (Lagrange interpolation). That is, a weight vector $w \in \R^n$ with $f_w(x_i) = y_i$ for every $i$.
+    \item \emph{Over-parametrised setting $d' > n$ (polynomials of degree $\geq n$)}: there exists an infinite number of ways of interpolating the points.
+\end{itemize}
+
+\begin{remark}[What ``linear regression'' really means]
+``Linear regression'' refers to models that are \emph{linear in the parameters}
+$w$, \emph{not} necessarily linear in the input $x$. Both $f_w(x) = \langle
+w, x\rangle$ and the polynomial model $f_w(x) = \langle w, \phi(x)\rangle$ above
+are linear regression, even though the latter is a curved function of $x$. This
+is exactly the property that makes the least-squares objective a convex
+quadratic in $w$, and it is why everything proved so far survives untouched, as
+we now check.
+\end{remark}
+
+\paragraph{Learnt features: back to neural networks.}
+Feature expansion also gives an interesting way of seeing the neural network we met in
+\Cref{subsec:function-class}. Grouping its hidden units into a vector, one can write:
+\[
+f_w(x) = \sum_{k=1}^m a_k \, \sigma\big( \langle b_k, x \rangle + c_k \big)
+= \big\langle a, \phi_{b,c}(x) \big\rangle ,
+\qquad
+\phi_{b,c}(x) = \Big( \sigma\big( \langle b_k, x \rangle + c_k \big) \Big)_{1 \leq k \leq m} ,
+\]
+we see that a neural network is nothing but a linear model on top of a feature
+map: the $m$ hidden neurons are the features, and the output weights $a \in
+\R^m$ play the role of $w$. If the inner parameters $(b_k, c_k)$ are frozen, for
+instance drawn at random once and never touched again, then $\phi_{b,c}$ is a
+fixed feature map and fitting $a$ is exactly the least-squares problem of this
+section, closed-form solution included. This is the \emph{random features}
+model.
+
+The whole difference is that a neural network does not freeze them: it trains
+the $(b_k, c_k)$ together with $a$. The features are then no longer picked by
+hand beforehand, they are \emph{learnt from the data}, which is what makes these
+models so effective on inputs (images, sound, text) for which nobody knows how
+to design a good $\phi$. The price is the one announced earlier: the model is no
+longer linear in its parameters, the objective is no longer convex, and there is
+no closed-form solution.

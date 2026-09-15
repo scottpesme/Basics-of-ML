@@ -1,0 +1,28 @@
+%%%%%%% Usual macros
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\tr}{\operatorname{tr}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\h}{\mathcal{H}}
+\newcommand{\F}{\mathcal{F}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\Z}{\mathbb{Z}}
+\renewcommand{\P}{\mathbb{P}}
+\newcommand{\sgn}{\mathrm{sgn}}
+\newcommand{\ran}{\mathrm{Ran}}
+\renewcommand{\ker}{\mathrm{Ker}}
+% NB: do NOT redefine \span. It is a TeX primitive that amsmath uses when it
+% builds the preamble of align/aligned/split, so overwriting it makes every such
+% environment fail with "Missing # inserted in alignment preamble". Hence \spn.
+\newcommand{\spn}{\operatorname{span}}
+\newcommand{\rank}{\operatorname{rank}}
+\newcommand{\Var}{\operatorname{Var}}
+\DeclareMathOperator*{\argmin}{argmin}
+\DeclareMathOperator*{\argmax}{argmax}
+\newcommand{\note}[1]{{\textbf{\color{red}#1}}}
+\newcommand{\diag}{\mathop{\rm diag}}
+\newcommand{\Diag}{\mathop{\rm Diag}}
+% \newcommand{\var}{\mathop{ \rm var}}
+\newcommand{\sign}{\mathop{ \rm sign}}
+% \newcommand{\dd}{\mathrm{d}}

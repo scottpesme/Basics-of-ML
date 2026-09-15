@@ -1,0 +1,124 @@
+\section{Learning framework}
+
+Before diving into any algorithm, let us informally describe what we mean by
+\emph{learning} from data. The guiding idea of machine learning is to replace
+explicit, hand-written rules by a procedure that \emph{extracts patterns from
+examples}. Rather than telling a computer exactly how to recognise a cat, or how
+to price a flat, we provide it with a collection of \emph{data} and let it
+\emph{learn} a rule that performs well and, crucially, keeps performing
+well on new data it has never seen. This section sets up the vocabulary; the
+precise definitions and the mathematics come in the following sections.
+
+\subsection{What is ``data''?}
+
+Everything starts from \emph{data}: a collection of examples
+$x_1, \dots, x_n$, where $n$ is the number of samples. Throughout these notes we
+represent each example as a vector (sometimes called ``sample'' or ``input'') $x_i$, but this vector can encode
+essentially anything, provided we agree on a way to turn the raw object into
+numbers. A few concrete cases:
+\begin{itemize}
+    \item \emph{Feature vectors.} The most direct case, where each coordinate is
+    an interpretable measurement. To describe a flat, one might take
+    \[
+    x = \big( [\text{surface in m}^2],\ [\text{number of rooms}],\ [\text{floor}],\ \dots \big) .
+    \]
+    \item \emph{Images.} A colour image of $H \times W$ pixels is a grid of RGB
+    intensities. Flattening it gives a vector $x \in \R^d$ with $d = 3 H W$ (one
+    coordinate per colour channel and pixel). A modest $224 \times 224$ image
+    already lives in dimension $d \approx 1.5 \times 10^5$.
+    \item \emph{Sound.} An audio clip is an amplitude sampled through time. If we
+    record $d$ amplitudes, the clip is a vector $x \in \R^d$, one coordinate per time step.
+    \item \emph{Text, graphs, \dots} Similarly, a piece of text, a molecule, or a
+    social network can all be encoded as vectors once we fix a suitable
+    representation.
+\end{itemize}
+The common thread is that, after a suitable encoding, every input becomes a
+point $x_i \in \R^d$. This is what lets a single mathematical framework cover
+such different-looking objects.
+
+In \emph{supervised} problems each input $x_i$ comes with a \emph{label} $y_i$,
+and the nature of $y$ varies just as much. It may be a real number
+$y \in \R$ (a price, a temperature), a binary label $y \in \{0, 1\}$ (spam or
+not), one of several categories $y \in \{1, \dots, K\}$ (which digit is written),
+or even a structured object such as another image or a sentence. The two basic
+regimes, real-valued and categorical labels, are exactly the regression and
+classification problems we distinguish below.
+
+\subsection{Supervised vs.\ unsupervised learning}
+
+The first thing to ask about a learning problem is \emph{what the data looks
+like}. This largely determines which family of methods is relevant.
+
+\paragraph{Supervised learning.}
+Here each data point comes as a \emph{pair} $(x, y)$: an \emph{input} (or
+feature vector) $x$ together with a \emph{label} (or response) $y$ that we would
+like to predict. The training set is a list
+\[
+(x_1, y_1), \dots, (x_n, y_n),
+\]
+and the goal is to learn a function $f$ such that $f(x) \approx y$, so that we
+can predict the label of a \emph{new} input. The name ``supervised'' reflects
+the fact that, for every training input, a supervisor has provided the correct
+answer $y$. Predicting the price of a flat from its characteristics, or deciding
+whether an email is spam, are typical examples.
+
+\paragraph{Unsupervised learning.}
+Now the data consists of \emph{inputs only},
+\[
+x_1, \dots, x_n,
+\]
+with no labels attached. Since there is nothing specific to predict, the goal
+shifts to \emph{discovering structure} in the data on its own. Typical tasks
+include \emph{clustering} (grouping similar points together) and \emph{dimensionality
+reduction} (finding a few directions that capture most of the variability). We will see these in \Cref{sec:unsupervised}, through the $K$-means algorithm and principal component
+analysis respectively.
+
+\paragraph{Self-supervised learning.}
+A particularly powerful idea, and the engine behind most modern large-scale
+models, is to \emph{manufacture the labels from the unlabelled data itself}.
+In \emph{self-supervised} learning one starts from inputs only and creates an
+artificial supervised problem by hiding part
+of each data point and asking the model to predict it from the rest. No human
+annotation is required, yet the resulting task looks supervised. The typical
+example is language modelling: take a sentence, hide a word (or simply ask for
+the next one), and predict it from its surrounding context; repeating this over
+enormous text corpora is how large language models are trained. The same recipe
+applies to images (predict missing patches) or audio. Having learned rich
+representations this way, the model can then be adapted to an actual downstream
+task using comparatively few labels.
+
+\begin{remark}[Other paradigms]
+Supervised and unsupervised learning are the two pillars of this course, but
+they do not exhaust machine learning. In \emph{reinforcement learning}, for
+instance, an agent interacts with an environment and learns from \emph{rewards}
+rather than from labelled examples: think of a program learning to play a
+game by trial and error. We will not treat it here.
+\end{remark}
+
+\subsection{Supervised learning: regression vs.\ classification}
+
+Within supervised learning, problems are further split according to the
+\emph{nature of the label} $y$ we want to predict.
+
+\paragraph{Regression.}
+When the label is a \emph{real-valued} (continuous) quantity, $y \in \R$, we
+speak of a \emph{regression} problem. Predicting a price, a temperature, or a
+person's age from a photograph are regression tasks. This is the setting we
+develop in detail in the next section.
+
+\paragraph{Classification.}
+When the label takes its values in a \emph{finite set of categories}, we speak
+of a \emph{classification} problem. With two categories,
+$y \in \{0, 1\}$ (or $\{-1, +1\}$), the problem is called \emph{binary}
+classification, e.g.\ spam vs.\ not spam, healthy vs.\ sick. With more than
+two categories, $y \in \{1, \dots, K\}$, it is \emph{multi-class}, e.g.\
+recognising which digit, from $0$ to $9$, is written in an image.
+
+\begin{remark}[Same recipe, different label]
+Regression and classification share the very same blueprint: a class of
+candidate functions, a way to measure the quality of a prediction, and an
+algorithm that searches for a good function. What changes is mostly the type of
+$y$ and, consequently, the loss used to compare a prediction with the truth.
+Mastering regression therefore gives us most of the tools needed for
+classification as well.
+\end{remark}

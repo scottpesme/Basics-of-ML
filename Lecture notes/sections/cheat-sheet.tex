@@ -1,0 +1,340 @@
+\section{Useful Formulas and Good Practices}
+
+
+\begin{comment}
+
+\subsection{Table of symbols}
+\label{subsec:symbols}
+
+A compact index of every symbol used in these notes. Where the same letter carries
+more than one meaning (this is unavoidable, and standard), both are listed and the
+context that disambiguates them is given.
+
+\begingroup
+\renewcommand{\arraystretch}{1.25}
+\setlength{\LTpre}{8pt}\setlength{\LTpost}{8pt}
+\begin{longtable}{@{}>{$}l<{$}@{\hspace{1.4em}}p{0.72\textwidth}@{}}
+\toprule
+\endhead
+\multicolumn{2}{@{}l}{\textbf{Data}} \\
+\midrule
+n & number of training samples \\
+d & number of features \emph{actually fed to the model}: the number of columns of $X$ and the dimension of $w$ \\
+d_0 & dimension of the raw input, before any feature map (so $d = d_0$ when $\phi = \mathrm{id}$) \\
+x_i \in \R^d & the $i$-th input; $x_{i,j}$ is its $j$-th coordinate \\
+y_i & the $i$-th label: in $\R$ (regression), in $\{-1,+1\}$ (binary classification), in $\{1, \dots, K\}$ (multiclass) \\
+X \in \R^{n \times d} & design matrix, whose $i$-th row is $x_i^\top$ \\
+y \in \R^n & vector of labels $(y_1, \dots, y_n)$ \\
+i,\ j & $i$ always indexes samples ($1 \le i \le n$), $j$ always indexes coordinates ($1 \le j \le d$); a second index of the same kind is primed, as in $i'$ or $j'$ \\
+\addlinespace
+\multicolumn{2}{@{}l}{\textbf{Model, loss, objective}} \\
+\midrule
+w \in \R^d & parameter, or weight vector; $b \in \R$ the intercept \\
+f_w,\ \F & the predictor with parameter $w$, and the function class $\{f_w\}$ \\
+\ell & loss on a single sample: written $\ell(\hat y, y)$ in regression, $\ell(m)$ as a function of the margin in classification \\
+L(w) & empirical risk, $\frac1n \sum_i \ell_i(w)$; $\ell_i(w) \coloneqq \ell(f_w(x_i), y_i)$ \\
+L_\lambda & regularised risk $L(w) + \tfrac{\lambda}{2}\Vert w\Vert^2$ (ridge, or penalised logistic) \\
+L_{0/1} & misclassification rate, the empirical risk of the $0/1$ loss \\
+w^\star & a minimiser of $L$ \\
+w^\dagger & the minimum-norm minimiser, $\argmin\{\Vert w\Vert : Xw = y\}$ \\
+w^\star_\lambda & the (unique) ridge minimiser \\
+\addlinespace
+\multicolumn{2}{@{}l}{\textbf{Optimisation}} \\
+\midrule
+\gamma & step size, or learning rate; $\gamma_t$ when it varies with the iteration \\
+t,\ w_t & iteration counter and iterate; $w_\infty = \lim_t w_t$ \\
+\addlinespace
+\multicolumn{2}{@{}l}{\textbf{Classification}} \\
+\midrule
+m_i(w) & margin of sample $i$, equal to $y_i \langle w, x_i\rangle$; positive iff correctly classified \\
+\rho & a separation margin, $\min_i y_i \langle u, x_i \rangle$ (called $\rho$ and not $\gamma$, which is the step size) \\
+\sigma(t) & the sigmoid $1/(1 + e^{-t})$. \\
+W,\ w_k & multiclass parameter $W = (w_1, \dots, w_K) \in \R^{d \times K}$, one weight vector per class \\
+p_k(x) & softmax weight of class $k$ at $x$ \\
+\addlinespace
+\multicolumn{2}{@{}l}{\textbf{Unsupervised learning}} \\
+\midrule
+\hat X & the reconstruction of the data; both methods minimise $\Vert X - \hat X\Vert_F^2$ over a constrained set of $\hat X$ \\
+\Vert A \Vert_F & Frobenius norm, $\sqrt{\tr(A^\top A)}$; the Euclidean norm of $A$ read as a vector \\
+V,\ v_k & PCA: orthonormal basis of the retained subspace, $V \in \R^{d \times K}$ with $V^\top V = I_K$ \\
+P_V & the orthogonal projector $V V^\top$ onto that subspace, so $\hat X = X P_V$ \\
+\hat\Sigma & empirical covariance $\tfrac1n X^\top X$ of the centred data; $\lambda_k$, $u_k$ its eigenvalues and principal directions \\
+S_k,\ \mu_k & $K$-means: the $k$-th cluster and its centroid. The index letter disambiguates: $\mu_k$ with $k \leq K$ is a centroid, $\mu_j$ with $j \leq d$ an eigenvalue \\
+Z,\ M & assignment matrix $Z \in \{0,1\}^{n \times K}$ (one $1$ per row) and centroid matrix $M \in \R^{K \times d}$, so $\hat X = ZM$ \\
+\pi_k,\ \Sigma_k & mixture weight and covariance of component $k$ of a Gaussian mixture \\
+\addlinespace
+\bottomrule
+\end{longtable}
+\endgroup
+
+\end{comment}
+
+\subsection{Definitions and notations}
+
+Keep in mind that these are the notations I like to use, but these are obviously personal and others will use different ones!!
+\begin{itemize}
+    \item the notation $x$ will always be used for input data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point. Similarly, $y$ will used for output data, e.g. $y_1, \dots, y_n \in \R$ (or $\in \{0, 1\}$) are output data (or labels). When $d > n$, we often say that we are in the \textit{over-parametrised setting} (also called \textit{under-determined setting}, which can be confusing!), and when $d \leq n$ we say that we are in the \textit{under-parametrised setting} (also called \textit{over-determined setting}).
+    \item $X = \begin{pmatrix}
+- & x_1 & - \\
+  & \vdots &  \\
+- & x_n & -
+\end{pmatrix}
+\in \R^{n \times d}$ corresponds to data / feature / design / observation matrix. It has $n$ rows (the \textit{number of samples}) and $d$ columns (the \textit{dimension of the data points}).
+    \item $y = (y_1, \dots, y_n) \in \R^{n}$ corresponds to the output vector.
+    \item for a vector $u \in \R^d$, we let $\Vert u \Vert_2 \coloneqq \sqrt{\sum_{j = 1}^d u_j^2}$ denote the Euclidean norm of $u$ (also called $\ell_2$-norm). It is the only norm we use, so we drop the subscript and simply write $\Vert u \Vert$ from here on.
+    \item for vectors $u, v \in \R^d$, we denote $\langle u, v \rangle \coloneqq \sum_{j = 1}^d u_j v_j$ to be the inner product of $u$ and $v$. Notice that $\Vert u \Vert^2 = \langle u, u \rangle$. Two vectors are said to be orthogonal if their inner product is null.
+    \item for vectors $x_1, \dots, x_n$, their span corresponds to the linear space which they generate: $\spn(x_1, \dots, x_n) \coloneqq \{ \lambda_1 x_1 + \dots + \lambda_n x_n , \text{where} \  \lambda_1, \dots, \lambda_n \in \R \}$.
+    \item the rank of a matrix corresponds to the dimension of the span of its columns, which is equal to the dimension of the span of its rows. Therefore for $X \in \R^{n \times d}$, it holds that $\rank(X) \leq \min(n, d)$. A matrix is said to be full rank if $\rank(X) = \min(n, d)$.
+    \item the null space (sometimes called kernel) of a matrix $A \in \R^{n \times d}$ is defined as $\ker(A) = \{ w \in \R^d, A w = 0 \}$.
+    \item a matrix $A \in \R^{d \times d}$ is said to be symmetric if $A^{\top} = A$. It is said to be positive semi-definite (we write this as  $A \succeq 0$) if for all vector $u \in \R^d$, $u^\top A u \geq 0$. For a symmetric matrix, this is equivalent to saying that all the eigenvalues of $A$ are non-negative.
+\end{itemize}
+
+
+
+\subsection{Linear Algebra}
+\label{sec:cheat-linalg}
+
+\begin{itemize}
+    \item For a matrix $A \in \R^{d \times d}$, it holds that $w^\top A w = \sum_{j, j' = 1}^d w_j w_{j'} A_{j, j'}$.
+    \item It holds that $X^\top X = \sum_{i=1}^n x_i x_i^\top \in \R^{d \times d}$ and $X X^\top = \big (\langle x_i, x_{i'} \rangle \big )_{1 \leq i, i' \leq n} \in \R^{n \times n}$.
+    \item For a vector $w \in \R^d$, the vector $X w$ lives in $\R^n$ and is equal to $Xw = \begin{pmatrix}
+\langle x_1, w \rangle  \\
+\vdots  \\
+\langle x_n, w \rangle 
+\end{pmatrix}
+$
+    \item Let $L(w) = \frac{1}{2n} \sum_{i = 1}^n (y_i - \langle w, x_i \rangle)^2$, then $L(w) = \frac{1}{2n} \Vert y - X w \Vert^2$ and $\nabla L(w) = \frac{1}{n} X^\top (X w - y)$.
+    \item invertibility of $X^\top X$ and of $X X^\top$ is settled by the rank of $X$; see \Cref{subsec:cheat-rank} for the precise statements and for why, on ``typical'' data, one of the two is always invertible.
+    \item \textit{Rank-nullity theorem:} for $A \in \R^{n \times d}$, it holds that $\rank(A) + \dim \ker(A) = d$.
+    \item \textit{Trace.} For a square matrix $A \in \R^{d \times d}$, $\tr(A) = \sum_{j=1}^d A_{j,j}$ is the sum of its diagonal entries, equivalently the sum of its eigenvalues. It is linear, satisfies $\tr(A^\top) = \tr(A)$, and is \emph{cyclic}: $\tr(AB) = \tr(BA)$ whenever both products make sense, even when $A$ and $B$ are rectangular of different shapes. Cyclicity is the workhorse of \Cref{sec:unsupervised}.
+    \item \textit{Frobenius norm.} For $A \in \R^{n \times d}$, $\Vert A \Vert_F^2 \coloneqq \sum_{i,j} A_{i,j}^2 = \tr(A^\top A)$: the Euclidean norm of $A$ read as a vector of $nd$ entries. If the rows of $A$ are $a_1, \dots, a_n$ then $\Vert A \Vert_F^2 = \sum_{i=1}^n \Vert a_i \Vert^2$.
+    \item \textit{Orthogonal projectors.} A matrix $P \in \R^{d \times d}$ with $P^\top = P$ and $P^2 = P$ is the orthogonal projector onto its range. It satisfies $\Vert P u \Vert \leq \Vert u \Vert$ for every $u$, and $\tr(P) = \rank(P)$, i.e.\ the trace of a projector is the dimension of the subspace it projects onto.
+\end{itemize}
+
+
+\subsection{Span, rank, and generic full-rankness}
+\label{subsec:cheat-rank}
+
+This subsection gathers a few linear-algebra facts that come back throughout the course, together with a genericity statement explaining why, for ``typical'' data, either $X^\top X$ or $X X^\top$ is invertible.
+
+\begin{definition}[Span and linear independence]
+The span of vectors $u_1, \dots, u_k \in \R^m$ is the linear subspace they generate,
+\[
+\spn(u_1, \dots, u_k) \coloneqq \Big\{ \textstyle\sum_{i=1}^k \lambda_i u_i \ : \ \lambda_1, \dots, \lambda_k \in \R \Big\} \subseteq \R^m .
+\]
+The vectors are said to be linearly independent if none of them lies in the span of the others, equivalently if $\sum_{i} \lambda_i u_i = 0$ if and only if $\lambda_1 = \dots = \lambda_k = 0$.
+\end{definition}
+
+\begin{definition}[Rank]
+The rank of a matrix $X \in \R^{n \times d}$ is the dimension of the span of its columns, which always coincides with the dimension of the span of its rows. In particular
+\[
+\rank(X) \leq \min(n, d),
+\]
+and $X$ is said to be \emph{full rank} when this bound is attained. We speak of \emph{full column rank} when $\rank(X) = d$ (the columns are independent, which forces $n \geq d$) and of \emph{full row rank} when $\rank(X) = n$ (the rows are independent, which forces $d \geq n$).
+\end{definition}
+
+Two identities make the rank the right tool for deciding invertibility of the Gram matrices $X^\top X$ and $X X^\top$.
+
+\begin{lemma}[Kernel and rank of the Gram matrices]\label{app:lemma:rank-XX-X}
+For any $X \in \R^{n \times d}$,
+\[
+\ker(X^\top X) = \ker(X), \qquad \rank(X^\top X) = \rank(X X^\top) = \rank(X).
+\]
+Consequently:
+\begin{itemize}
+    \item $X^\top X \in \R^{d \times d}$ is invertible $\iff$ $\rank(X) = d$ (full column rank), which requires $n \geq d$;
+    \item $X X^\top \in \R^{n \times n}$ is invertible $\iff$ $\rank(X) = n$ (full row rank), which requires $d \geq n$.
+\end{itemize}
+\end{lemma}
+
+\begin{proof}[Proof sketch]
+If $X^\top X w = 0$, then $\Vert X w \Vert^2 = w^\top X^\top X w = 0$, so $X w = 0$; the reverse inclusion is immediate, hence $\ker(X^\top X) = \ker(X)$. The rank equalities then follow from the rank-nullity theorem (\Cref{sec:cheat-linalg}). Finally, a square matrix is invertible if and only if its kernel is trivial, i.e.\ if and only if it is full rank.
+\end{proof}
+
+\begin{lemma}[Generic full-rankness]
+Suppose the rows $x_1, \dots, x_n \in \R^d$ of $X$ are drawn from a distribution that is absolutely continuous with respect to the Lebesgue measure on $\R^d$ (i.e.\ it admits a density). Then, almost surely,
+\[
+\rank(X) = \min(n, d),
+\]
+that is, $X$ is full rank.
+\end{lemma}
+
+\begin{proof}[Why this holds]
+Full-rankness fails exactly when every maximal square submatrix of $X$ has zero determinant. Each such determinant is a nonzero polynomial in the entries of $X$, and the zero set of a nonzero polynomial has Lebesgue measure zero. An absolutely continuous distribution assigns probability zero to any measure-zero set, so the ``degenerate'' configurations occur with probability zero.
+\end{proof}
+
+Combining the two lemmas and separating according to the shape of $X$ gives the statement we use in practice.
+
+\begin{corollary}[Which Gram matrix is invertible?]
+Under the absolute-continuity assumption above, almost surely:
+\begin{itemize}
+    \item if $n \leq d$ (in particular the \emph{over-parametrised} case $d > n$), the rows are independent, $\rank(X) = n$, and $X X^\top \in \R^{n \times n}$ is invertible;
+    \item if $n \geq d$ (the \emph{under-parametrised} case), the columns are independent, $\rank(X) = d$, and $X^\top X \in \R^{d \times d}$ is invertible.
+\end{itemize}
+When $n = d$ both hold simultaneously.
+\end{corollary}
+
+One direction, however, needs no genericity assumption at all, and is worth keeping in mind whenever $d > n$.
+
+\begin{lemma}[If $d > n$, then $X^\top X$ is never invertible]
+If $d > n$, then for \emph{every} $X \in \R^{n \times d}$ we have
+\[
+\rank(X^\top X) = \rank(X) \leq n < d,
+\]
+so $X^\top X \in \R^{d \times d}$ is not full rank, and hence \emph{not invertible}. Its null space is therefore nontrivial:
+\[
+\dim \ker(X^\top X) = \dim \ker(X) = d - \rank(X) \geq d - n > 0 .
+\]
+In words: in the over-parametrised setting there is always a nonzero direction $w$ with $X w = 0$, so the normal equations $X^\top X w = X^\top y$ cannot have a unique solution.
+\end{lemma}
+
+
+\subsection{Gradients}
+
+If $f : \R^d \to \R$ is twice differentiable, then its gradient $\nabla f : \R^d \to \R^d$ and Hessian $\nabla^2 f : \R^d \to \R^{d \times d}$ are defined as:
+\[\nabla f(w) = \Big ( \frac{\partial f}{\partial w_j}(w) \Big )_{1 \leq j \leq d} \quad \nabla^2 f(w) = \Big ( \frac{\partial^2 f}{\partial w_j \partial w_{j'}}(w) \Big )_{1 \leq j, j' \leq d} \]
+
+\begin{itemize}
+    \item For a vector $b \in \R^d$, the gradient of the linear function $f : \R^d \to \R$, $f(w) = \langle b , w \rangle $ is equal to $\nabla f(w) = b$.
+    \item For a (not necessarily symmetric) matrix $A \in \R^{d \times d}$, $f(w) = \frac{1}{2} w^\top A w$ is a quadratic function. Its gradient is $\nabla f(w) = \frac{1}{2} (A + A^\top) w$, which is equal to $A w$ if and only if $A$ is a symmetric matrix. The Hessian of $f$ is equal to $\nabla^2 f(w) = \frac{1}{2} (A + A^\top)$.
+\end{itemize}
+
+\subsection{Convexity}
+\label{sec:cheat-convexity}
+
+A function $f:\R^d \to \R$ is said to be convex if for all $w_1, w_2 \in \R^d$ and $\lambda \in [0, 1]$, $f(\lambda w_1 + (1 - \lambda) w_2) \leq \lambda f(w_1) + (1 - \lambda) f(w_2)$ (DO A DRAWING TO VISUALISE THIS!). It is said to be \emph{strictly convex} if this inequality is strict whenever the two points differ, i.e.\ for all $w_1 \neq w_2$ and all $\lambda \in (0, 1)$, $f(\lambda w_1 + (1 - \lambda) w_2) < \lambda f(w_1) + (1 - \lambda) f(w_2)$.
+
+\begin{itemize}
+    \item if $f$ is convex and differentiable, then for all $w_1, w_2 \in \R^d$, it holds that $f(w_2) \geq f(w_1) + \langle \nabla f(w_1), w_2 - w_1 \rangle$ (DO A DRAWING TO VISUALISE THIS!).
+    \item if $f$ is convex, then all local minima are global. Moreover, if $f$ is differentiable and $\nabla f(w^\star) = 0$, then $w^\star$ is a global minimum: the inequality of the previous bullet immediately gives $f(w) \geq f(w^\star) + \langle \nabla f(w^\star), w - w^\star\rangle = f(w^\star)$ for every $w$. However, keep in mind that there exist convex functions which do not have any minima! (the exponential function for example)
+    \item if $f$ is strictly convex, then it has \emph{at most one} minimiser: a minimum need not exist (again think of the exponential), but if it does, it is unique. Indeed, if $w_1 \neq w_2$ were two minimisers with common value $m$, then strict convexity at $\lambda = \tfrac12$ would give $f(\tfrac{w_1 + w_2}{2}) < \tfrac12 f(w_1) + \tfrac12 f(w_2) = m$, contradicting the minimality of $m$.
+    \item if a function $f$ is convex, then its sublevel sets $\{ w \in \R^d, f(w) \leq c \}$ are convex sets for all $c \in \R$. The converse is false (for example think of $x \mapsto \sqrt{|x|}$ in 1d).
+    \item let $\lambda_1, \lambda_2 \geq 0$, if $f_1$ and $f_2$ are convex functions, then so is $\lambda_1 f_1 + \lambda_2 f_2$.
+    \item if $f : \R^n \to \R$ is convex and $A \in \R^{n \times d}$ and $b \in \R^n$, then $w \in \R^d \mapsto f(A w + b)$ is convex too.
+\end{itemize}
+
+\subsection{Centring and standardising the features}
+\label{subsec:standardise}
+
+Three separate places in these notes ask for the features to be rescaled before
+fitting, for three different reasons. Since it is the same operation every time, here
+it is once and for all.
+
+\paragraph{The operation.}
+For each coordinate $j = 1, \dots, d$, compute the empirical mean and standard
+deviation of that feature over the training set,
+\[
+\bar x_j = \frac{1}{n} \sum_{i=1}^n x_{i,j} ,
+\qquad
+\hat s_j = \sqrt{ \frac{1}{n} \sum_{i=1}^n (x_{i,j} - \bar x_j)^2 } ,
+\]
+and replace each entry of the design matrix by
+\[
+\tilde x_{i,j} = \frac{x_{i,j} - \bar x_j}{\hat s_j} .
+\]
+Every column of the new design matrix then has mean $0$ and variance $1$. One usually
+centres the response as well, $\tilde y_i = y_i - \bar y$. Two caveats on the
+mechanics: a constant column added for the intercept must be left alone (its standard
+deviation is $0$), and a feature that is constant on the training set should be dropped
+rather than divided by $\hat s_j = 0$. The constants $\bar x_j$ and $\hat s_j$ must be
+kept, since a new input has to be put through the very same transformation before the
+model can be applied to it.
+
+\paragraph{Why: three reasons.}
+\begin{itemize}
+    \item \emph{Conditioning, hence the speed of gradient descent}
+    (\Cref{rem:step-size}). The number of GD iterations is governed by the condition
+    number $\lambda_{\max}(X^\top X)/\lambda_{\min}(X^\top X)$, because a single step
+    size $\gamma$ must be small enough for the steepest direction while progress along
+    the flattest one is set by the smallest eigenvalue. Features measured in wildly
+    different units (a surface in $\text{m}^2$ next to a number of rooms) make that
+    ratio enormous for no reason at all, and gradient descent then crawls.
+    \item \emph{Comparability of the ridge penalty} (\Cref{subsec:ridge}). A single
+    $\lambda$ is applied to every coordinate of $w$, so it only means the same thing in
+    every direction if the coordinates are on the same scale. Measuring a surface in
+    $\text{m}^2$ rather than $\text{km}^2$ multiplies the corresponding feature by
+    $10^6$ and divides its weight by $10^6$, so ridge would penalise two encodings of
+    the \emph{same} model completely differently.
+    \item \emph{It costs nothing for ordinary least squares.} The least-squares
+    predictor is unchanged by any invertible linear reparametrisation of the features:
+    replacing $X$ by $XA$ replaces $w^\star$ by $A^{-1}w^\star$ and leaves the
+    predictions $Xw^\star$ alone. So standardising never hurts the fit, which is why it
+    is applied by default.
+\end{itemize}
+
+\paragraph{The trap: compute the statistics on the training data only.}
+This is the mistake that silently inflates every reported number. The constants
+$\bar x_j$ and $\hat s_j$ are \emph{estimated from data}, so they are part of the
+fitting procedure and must be computed on the training portion alone, then applied
+unchanged to the validation and test portions. Standardising the full dataset first
+lets information about the held-out points (their mean, their spread) leak into the
+fit, and the resulting error estimate is optimistic. The same applies inside
+cross-validation: the statistics must be recomputed on each of the $K-1$ training
+folds, not once on the whole set. In practice this is what a ``pipeline'' object in a
+machine learning library is for. The rule is worth stating in general: \emph{any}
+quantity estimated from data is part of the model, and must never see the test set.
+
+
+\subsection{Numerical stability}
+\label{subsec:numerics}
+
+The formulas of these notes are exact on paper and can overflow on a computer. Two
+places where this bites, and the standard fixes, all of which are what the libraries
+do internally.
+
+\paragraph{Log-sum-exp: subtract the maximum.}
+The multiclass loss of \Cref{subsec:multiclass} contains $\log \sum_{k} e^{a_k}$. In
+floating point $e^{a_k}$ overflows to infinity for $a_k$ around $710$ and underflows to
+zero for $a_k$ around $-745$, so the expression evaluated naively returns \texttt{inf}
+or $\log 0 = -\infty$ on perfectly reasonable scores. The fix uses the identity, valid
+for any $c \in \R$,
+\[
+\log \sum_{k=1}^K e^{a_k} = c + \log \sum_{k=1}^K e^{a_k - c} ,
+\]
+with the choice $c = \max_k a_k$. Every exponent is then $\leq 0$, so no term can
+overflow, and the largest is exactly $e^0 = 1$, so the sum cannot underflow to zero
+either. The same trick stabilises the softmax weights $p_k(x)$, which are unchanged by
+subtracting a constant from all the scores (this is the redundancy of the
+parametrisation, put to work).
+
+
+\paragraph{Do not form $X^\top X$.}
+For the normal equations, forming the matrix $X^\top X$ and inverting it squares the
+condition number of $X$, so roughly half the available digits of precision are lost
+before the solve even begins. This is on top of the cost argument of
+\Cref{subsec:gd}. One instead solves the least-squares problem directly from $X$, by a
+$QR$ factorisation or an SVD; this is what a routine such as
+\texttt{numpy.linalg.lstsq} does, and it is the reason to prefer it over an explicit
+\texttt{inv(X.T @ X) @ X.T @ y}.
+
+
+\subsection{Good practices and sanity checks}
+\label{subsec:sanity}
+
+\paragraph{Math sanity checks} Always check that the math makes sense! 
+
+\begin{itemize}
+    \item  If $f : \R^d \to \R$, then for a vector $w \in \R^d$, $\nabla f(w)$ must belong to $\R^d$! So for example if $f(w) = \frac{1}{2} \Vert w \Vert^2$, then writing that ``$\nabla f(w) = \Vert w \Vert$'' doesn't make sense.
+    \item Check that the matrix operations are allowed: if $L(w) = \Vert y - X w \Vert^2$, writing that ``$\nabla L(w) = X (X w -y)$'' doesn't make sense because the operations $X X$ and $X y$ don't make sense for $n \neq d$ (and also because of the remark right above).
+\end{itemize}
+
+
+\paragraph{Dimensional sanity check.}  
+Even if an expression is mathematically well-formed, it might be meaningless from the point of view of ``units'' or ``dimensions.''  
+A quick check is to make sure your formulas are \emph{homogeneous}: every term you add or compare should have the same ``type.'' 
+ 
+\noindent
+\textit{Example.} Suppose our data are temperature observations $y_i$ measured in degrees Celsius. A feature vector $x \in \mathbb{R}^d$ could represent input quantities such as:
+\[
+x = \big([\text{altitude in meters}], [\text{pressure in pascals}], [\text{wind speed in meters per second}] \big).
+\]
+A parameter vector $w \in \mathbb{R}^d$ scales each feature so that the inner product $\langle w, x \rangle$
+has the same unit as $y$ (degrees Celsius). In our small example the units of $w$ are 
+\[ ([^\circ\mathrm{C}] \cdot [\text{meters}]^{-1}, [^\circ\mathrm{C}] \cdot [\text{pascals}]^{-1}, [^\circ\mathrm{C}] \cdot [\text{meters}]^{-1} \cdot [\text{seconds}]) \]
+Now notice that:
+\begin{itemize}
+    \item $\langle w, x \rangle$ makes sense: each coordinate of $w$ carries the reciprocal unit of the corresponding coordinate of $x$, so the sum yields something in degrees Celsius.  
+    \item $w + x$ does \emph{not} make sense: $w$ and $x$ do not have the same units (adding ``degrees per meter'' to ``meters'' is meaningless).  
+\end{itemize}
+
+

@@ -1,0 +1,94 @@
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{lmodern}
+\usepackage{amsmath,amsfonts,amssymb,amsthm}
+\usepackage{hyperref}
+\usepackage{graphicx}
+\usepackage{natbib}
+\usepackage{mathtools}
+\usepackage{titlesec}
+\usepackage{url}
+\usepackage[a4paper,margin=3cm]{geometry}
+\usepackage{enumitem}
+\usepackage{tikz}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{longtable}
+% Provides the `comment' environment used to park unused material in the sections.
+\usepackage{verbatim}
+% cleveref wants to be loaded after hyperref and the other maths packages, but
+% before the \newtheorem declarations below, so that it can pick up their names.
+\usepackage{cleveref}
+% Without this, references into the appendix come out as "Subappendix A.5".
+\crefname{appendix}{appendix}{appendices}
+\Crefname{appendix}{Appendix}{Appendices}
+\crefname{subappendix}{appendix}{appendices}
+\Crefname{subappendix}{Appendix}{Appendices}
+
+\hypersetup{ 
+     colorlinks=true, 
+     linkcolor=blue, 
+     % filecolor=blue, 
+     citecolor = blue,       
+     urlcolor=blue, 
+     } 
+
+% All numbered statements share a single counter, tied to the section, so that
+% "Proposition 3.4" says straight away which section to look in.
+\theoremstyle{plain}
+\newtheorem{thm}{Theorem}[section]
+\newtheorem*{thm*}{Theorem}
+\newtheorem{prop}[thm]{Proposition}
+\newtheorem*{prop*}{Proposition}
+\newtheorem{lemma}[thm]{Lemma}
+\newtheorem{corollary}[thm]{Corollary}
+\newtheorem{fact}[thm]{Fact}
+\newtheorem*{assSGF*}{Boundedness assumption}
+\newtheorem*{conditionSGD}{Step size condition}
+\newtheorem*{remark}{Remark}
+\newtheorem{example}[thm]{Example}
+% \newtheorem*{observation}{Observation}
+
+\theoremstyle{definition}
+\newtheorem*{definition}{Definition}
+\newtheorem{exercise}[thm]{Exercise}
+
+% Display exercises and theorem-like statements inside light boxes for clarity.
+\usepackage[most]{tcolorbox}
+
+% Common look: light background + coloured accent bar on the left. Only the
+% colour changes between categories, so the different kinds stay recognisable.
+\tcbset{
+  mlbox/.style={
+    enhanced, breakable, frame hidden,
+    boxrule=0pt,
+    colback=#1!5,
+    borderline west={3pt}{0pt}{#1!60},
+    sharp corners,
+    left=10pt, right=8pt, top=6pt, bottom=6pt,
+    before skip=10pt, after skip=10pt,
+  },
+  mlbox/.default=blue,
+}
+
+\tcolorboxenvironment{exercise}{mlbox=blue}
+
+% Results (theorems, propositions, lemmas, corollaries): violet.
+\tcolorboxenvironment{thm}{mlbox=violet}
+\tcolorboxenvironment{thm*}{mlbox=violet}
+\tcolorboxenvironment{prop}{mlbox=violet}
+\tcolorboxenvironment{prop*}{mlbox=violet}
+\tcolorboxenvironment{lemma}{mlbox=violet}
+\tcolorboxenvironment{corollary}{mlbox=violet}
+
+% Definitions: teal.
+\tcolorboxenvironment{definition}{mlbox=teal}
+
+% Admitted facts / assumptions / conditions: orange.
+\tcolorboxenvironment{fact}{mlbox=orange}
+\tcolorboxenvironment{assSGF*}{mlbox=orange}
+\tcolorboxenvironment{conditionSGD}{mlbox=orange}
+
+% Remarks and examples: neutral grey.
+\tcolorboxenvironment{remark}{mlbox=black}
+\tcolorboxenvironment{example}{mlbox=black}
