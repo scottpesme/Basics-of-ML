@@ -324,7 +324,7 @@ L(w) = L(w^\star) + \tfrac{1}{2n}\, \big\Vert X (w - w^\star) \big\Vert^2.
 We now consider the overparametrised setting where $d > n$. In this case $X^\top X$ cannot be inverted, so we solve the normal equations differently. 
 
 \paragraph{Generic interpolation.}
-In the overparametrised setting where $d > n$\footnote{in fact, all of the following also holds for $d=n$}, the inputs $x_1, \dots, x_n$ can span a linear subspace of $\R^d$ of dimension at most $n$. In fact, if they are linearly independent (which holds for almost all datasets, see \Cref{subsec:cheat-rank}), then their span is of dimension exactly $n$, which means that $\rank(X) = n$. This observation leads to the following proposition.
+In the overparametrised setting where $d > n$ (in fact, all of the following also holds for $d=n$), the inputs $x_1, \dots, x_n$ can span a linear subspace of $\R^d$ of dimension at most $n$. Moreover, if they are linearly independent (which holds for almost all datasets, see \Cref{subsec:cheat-rank}), then their span is of dimension exactly $n$, which means that $\rank(X) = n$. This observation leads to the following proposition.
 
 \begin{prop}[Zero training error]
 If the inputs $x_1, \dots, x_n$ are linearly independent (which requires $d \geq n$), then $\rank(X) = n$ and the linear map
@@ -621,6 +621,7 @@ Hessian), the gradient descent iterates converge to some limit $w_\infty =
 \end{fact}
 
 \begin{prop}[Implicit bias of GD]
+\label{prop:implicit-bias}
 Let $(w_t)_{t \geq 0}$ be the gradient descent iterates $w_{t+1} = w_t - \gamma\,
 \nabla L(w_t)$ on the least-squares loss $L$, started at $w_0 \in \R^d$, and let
 $w_\infty$ be their limit. Then:
@@ -735,11 +736,7 @@ sizes of $n$ and $d$.
 
 \begin{proof}
 The Hessian of $L_\lambda$ is $\nabla^2 L_\lambda = \tfrac{1}{n} X^\top X + \lambda I
-\succeq \lambda I \succ 0$, so $L_\lambda$ is strictly convex (see
-\Cref{sec:cheat-convexity}); and $L_\lambda(w) \geq \tfrac{\lambda}{2}\Vert w
-\Vert^2 \to \infty$ as $\Vert w \Vert \to \infty$, so it is coercive and its infimum
-is attained. A strictly convex function has at most one minimiser, hence exactly one
-here. Cancelling the gradient,
+\succeq \lambda I \succ 0$, so $L_\lambda$ is strictly convex. We can therefore find its minimum by finding the point where its gradient vanishes.
 \[
 \nabla L_\lambda(w) = \tfrac{1}{n} X^\top (X w - y) + \lambda w = 0
 \quad \Longleftrightarrow \quad
@@ -749,9 +746,15 @@ Finally $X^\top X + n\lambda I$ is positive definite (its eigenvalues are $\geq
 n\lambda > 0$), hence invertible, which gives the announced formula.
 \end{proof}
 
-It is worth noting that $w^\star_\lambda$ always lies in the span of the data: from
-the optimality condition, $w^\star_\lambda = \tfrac{1}{n\lambda} X^\top (y - X
-w^\star_\lambda) \in \spn(x_1, \dots, x_n)$.
+
+\begin{exercise}[$\star$]
+Prove that $w^\star_\lambda$ is also equal to:
+\[
+w^\star_\lambda = X^\top (X X^\top + n \lambda I_n)^{-1} y.
+\]
+Deduce that $w^\star_\lambda \in \spn(x_1, \dots, x_n)$.
+Which of the two formulas would you implement when $d \gg n$?
+\end{exercise}
 
 \paragraph{The two extremes.}
 The parameter $\lambda$ interpolates between two meaningful limits: crank it up and
