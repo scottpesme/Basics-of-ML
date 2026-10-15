@@ -72,10 +72,11 @@ Z,\ M & assignment matrix $Z \in \{0,1\}^{n \times K}$ (one $1$ per row) and cen
 \end{comment}
 
 \subsection{Definitions and notations}
+\label{subsec:notations}
 
 Keep in mind that these are the notations I like to use, but these are obviously personal and others will use different ones!!
 \begin{itemize}
-    \item the notation $x$ will always be used for input data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point. Similarly, $y$ will used for output data, e.g. $y_1, \dots, y_n \in \R$ (or $\in \{0, 1\}$) are output data (or labels). When $d > n$, we often say that we are in the \textit{over-parametrised setting} (also called \textit{under-determined setting}, which can be confusing!), and when $d \leq n$ we say that we are in the \textit{under-parametrised setting} (also called \textit{over-determined setting}).
+    \item the notation $x$ will always be used for input data. E.g. $x_1, \dots, x_n \in \R^d$ could be some dataset. $n$ is then the number of training samples, and $d$ the dimension of each data point. Similarly, $y$ will be used for output data, e.g. $y_1, \dots, y_n \in \R$ (or $\in \{0, 1\}$) are output data (or labels). When $d > n$, we often say that we are in the \textit{over-parametrised setting} (also called \textit{under-determined setting}, which can be confusing!), and when $d \leq n$ we say that we are in the \textit{under-parametrised setting} (also called \textit{over-determined setting}).
     \item $X = \begin{pmatrix}
 - & x_1 & - \\
   & \vdots &  \\
@@ -85,8 +86,7 @@ Keep in mind that these are the notations I like to use, but these are obviously
     \item $y = (y_1, \dots, y_n) \in \R^{n}$ corresponds to the output vector.
     \item for a vector $u \in \R^d$, we let $\Vert u \Vert_2 \coloneqq \sqrt{\sum_{j = 1}^d u_j^2}$ denote the Euclidean norm of $u$ (also called $\ell_2$-norm). It is the only norm we use, so we drop the subscript and simply write $\Vert u \Vert$ from here on.
     \item for vectors $u, v \in \R^d$, we denote $\langle u, v \rangle \coloneqq \sum_{j = 1}^d u_j v_j$ to be the inner product of $u$ and $v$. Notice that $\Vert u \Vert^2 = \langle u, u \rangle$. Two vectors are said to be orthogonal if their inner product is null.
-    \item for vectors $x_1, \dots, x_n$, their span corresponds to the linear space which they generate: $\spn(x_1, \dots, x_n) \coloneqq \{ \lambda_1 x_1 + \dots + \lambda_n x_n , \text{where} \  \lambda_1, \dots, \lambda_n \in \R \}$. 
-    \item the rank of a matrix corresponds to the dimension of the span of its columns, which is equal to the dimension of the span of its rows. Therefore for $X \in \R^{n \times d}$, it holds that $\rank(X) \leq \min(n, d)$. A matrix is said to be full rank if $\rank(X) = \min(n, d)$.
+    \item the span of a family of vectors and the rank of a matrix are defined in \Cref{subsec:cheat-rank}.
     \item the null space (sometimes called kernel) of a matrix $A \in \R^{n \times d}$ is defined as $\ker(A) = \{ w \in \R^d, A w = 0 \}$.
     \item a matrix $A \in \R^{d \times d}$ is said to be symmetric if $A^{\top} = A$. It is said to be positive semi-definite (we write this as  $A \succeq 0$) if for all vector $u \in \R^d$, $u^\top A u \geq 0$. For a symmetric matrix, this is equivalent to saying that all the eigenvalues of $A$ are non-negative.
 \end{itemize}
@@ -154,7 +154,7 @@ If $X^\top X w = 0$, then $\Vert X w \Vert^2 = w^\top X^\top X w = 0$, so $X w =
 \end{proof}
 
 \begin{lemma}[Generic full-rankness]
-Suppose the rows $x_1, \dots, x_n \in \R^d$ of $X$ are drawn from a distribution that is absolutely continuous with respect to the Lebesgue measure on $\R^d$ (i.e.\ it admits a density). Then, almost surely,
+Suppose the rows $x_1, \dots, x_n \in \R^d$ of $X$ are drawn \emph{independently} from a distribution that is absolutely continuous with respect to the Lebesgue measure on $\R^d$ (i.e.\ it admits a density). Then, almost surely,
 \[
 \rank(X) = \min(n, d),
 \]
@@ -162,16 +162,16 @@ that is, $X$ is full rank.
 \end{lemma}
 
 \begin{proof}[Why this holds]
-Full-rankness fails exactly when every maximal square submatrix of $X$ has zero determinant. Each such determinant is a nonzero polynomial in the entries of $X$, and the zero set of a nonzero polynomial has Lebesgue measure zero. An absolutely continuous distribution assigns probability zero to any measure-zero set, so the ``degenerate'' configurations occur with probability zero.
+Full-rankness fails exactly when every maximal square submatrix of $X$ has zero determinant. Each such determinant is a nonzero polynomial in the entries of $X$, and the zero set of a nonzero polynomial has Lebesgue measure zero in $\R^{n \times d}$. Since the rows are independent and each has a density, the matrix $X$ itself has a density on $\R^{n \times d}$ (the product of the densities of its rows), and therefore assigns probability zero to any measure-zero set: the ``degenerate'' configurations occur with probability zero. Independence matters: if for instance all the rows were equal to the same random vector, each row would still have a density, but $X$ would have rank $1$.
 \end{proof}
 
 Combining the two lemmas and separating according to the shape of $X$ gives the statement we use in practice.
 
 \begin{corollary}[Which Gram matrix is invertible?]
-Under the absolute-continuity assumption above, almost surely:
+Under the assumptions of the previous lemma, almost surely:
 \begin{itemize}
-    \item if $n \leq d$ (in particular the \emph{over-parametrised} case $d > n$), the rows are independent, $\rank(X) = n$, and $X X^\top \in \R^{n \times n}$ is invertible;
-    \item if $n \geq d$ (the \emph{under-parametrised} case), the columns are independent, $\rank(X) = d$, and $X^\top X \in \R^{d \times d}$ is invertible.
+    \item if $n \leq d$ (in particular the \emph{over-parametrised} case $d > n$), the rows are linearly independent, $\rank(X) = n$, and $X X^\top \in \R^{n \times n}$ is invertible;
+    \item if $n \geq d$ (the \emph{under-parametrised} case), the columns are linearly independent, $\rank(X) = d$, and $X^\top X \in \R^{d \times d}$ is invertible.
 \end{itemize}
 When $n = d$ both hold simultaneously.
 \end{corollary}
@@ -214,6 +214,30 @@ A function $f:\R^d \to \R$ is said to be convex if for all $w_1, w_2 \in \R^d$ a
     \item let $\lambda_1, \lambda_2 \geq 0$, if $f_1$ and $f_2$ are convex functions, then so is $\lambda_1 f_1 + \lambda_2 f_2$.
     \item if $f : \R^n \to \R$ is convex and $A \in \R^{n \times d}$ and $b \in \R^n$, then $w \in \R^d \mapsto f(A w + b)$ is convex too.
 \end{itemize}
+
+\subsection{Coercivity and existence of a minimum}
+\label{subsec:coercive}
+
+\begin{definition}[Coercive function]
+A function $f : \R^d \to \R$ is said to be \emph{coercive} if
+\[
+f(w) \xrightarrow[\Vert w \Vert \to +\infty]{} +\infty ,
+\]
+i.e.\ for every $M \in \R$ there exists a radius $R > 0$ such that $f(w) \geq M$ whenever $\Vert w \Vert \geq R$. In words: $f$ blows up in every direction as we move away from the origin.
+\end{definition}
+
+For example, $w \mapsto \Vert w \Vert^2$ is coercive, whereas $w \mapsto e^w$ (on $\R$) and $(w_1, w_2) \mapsto w_1^2$ (on $\R^2$) are not: the first one stays bounded as $w \to -\infty$, the second one is constant along the $w_2$-axis.
+
+\begin{prop}[Continuous coercive functions admit a minimum]
+\label{prop:coercive-min}
+If $f : \R^d \to \R$ is continuous and coercive, then $f$ admits a (global) minimum: there exists $w^\star \in \R^d$ such that $f(w^\star) \leq f(w)$ for all $w \in \R^d$.
+\end{prop}
+
+\begin{proof}
+Fix any point $w_0 \in \R^d$ and consider the sublevel set $K = \{ w \in \R^d : f(w) \leq f(w_0) \}$. It is non-empty (it contains $w_0$), closed (as the preimage of the closed set $(-\infty, f(w_0)]$ by the continuous function $f$), and bounded (by coercivity, there is an $R$ such that $f(w) > f(w_0)$ as soon as $\Vert w \Vert \geq R$, so $K$ is contained in the ball of radius $R$). Hence $K$ is compact, and the continuous function $f$ attains its minimum on $K$ at some $w^\star \in K$. Finally, any $w \notin K$ satisfies $f(w) > f(w_0) \geq f(w^\star)$, so $w^\star$ is in fact a global minimiser of $f$ on the whole of $\R^d$.
+\end{proof}
+
+Note that coercivity only gives \emph{existence}: the minimum need not be unique (think of $w \mapsto (\Vert w \Vert^2 - 1)^2$, minimised on the whole unit sphere). Combined with strict convexity (see \Cref{sec:cheat-convexity}), however, it gives existence \emph{and} uniqueness.
 
 
 \subsection{Good practices and sanity checks}

@@ -60,15 +60,16 @@ The margin packages the correctness of a prediction into a single signed number:
     \item $m_i > 0$ means $\langle w, x_i\rangle$ and $y_i$ have the same sign, i.e.\
     the point is \emph{correctly classified};
     \item $m_i < 0$ means the point is \emph{misclassified};
-    \item $|m_i|$ measures how far the point sits from the decision boundary, so a
-    large positive margin means ``correct, and confidently so''.
+    \item $|m_i| / \Vert w \Vert$ is the distance of the point to the decision
+    boundary (see the exercise below), so for a fixed $\Vert w \Vert$ a large
+    positive margin means ``correct, and confidently so''.
 \end{itemize}
 This is precisely why the labels $\pm 1$ are pleasant: they let a single expression
 $y_i \langle w, x_i\rangle$ carry both the prediction and whether it was right. Every
 loss we meet below is a function of the margin alone.
 
 \begin{exercise}[$\star$]
-Prove that the $| y_i \langle \frac{w}{\Vert w \Vert}, x_i \rangle |$ corresponds to the distance $\min_{x \in H_w} \Vert x - x_i \Vert$ which corresponds to the distance of $x_i$ to $H_w$.
+Prove that $\big| y_i \langle \frac{w}{\Vert w \Vert}, x_i \rangle \big| = \min_{x \in H_w} \Vert x - x_i \Vert$, i.e.\ that the normalised margin is the distance of $x_i$ to $H_w$.
 \end{exercise}
 
 \begin{remark}[Labels in $\{0, 1\}$]
@@ -143,8 +144,8 @@ We focus here on the
 This is by far the most used surrogate in practice and it is what essentially every classification
 neural network is trained on. It combines all the nice following properties:
 \begin{itemize}
-    \item It is \emph{convex}, so the empirical risk has no spurious local minima.
-    it is the very point of replacing $\ell_{0/1}$.
+    \item It is \emph{convex}, so the empirical risk has no spurious local minima,
+    which is the very point of replacing $\ell_{0/1}$.
     \item It is \emph{strictly decreasing}, so a point is never penalised for being
     classified \emph{too} well. 
     \item It grows only \emph{linearly} as $m \to -\infty$, since $\ln(1 + e^{-m}) =
@@ -303,9 +304,22 @@ The training set is said to be \emph{linearly separable} if there exists $w \in 
 \[
 y_i \langle w, x_i \rangle > 0 \qquad \text{for every } i = 1, \dots, n ,
 \]
-that is, if some hyperplane classifies every training point correctly. Otherwise it is
-\emph{non-separable}.
+that is, if some hyperplane classifies every training point correctly. It is said to be
+\emph{non-separable} if for every $w \neq 0$ there exists $i$ such that
+\[
+y_i \langle w, x_i \rangle < 0 ,
+\]
+that is, if every candidate direction \emph{strictly} misclassifies at least one point.
 \end{definition}
+
+\begin{remark}[An in-between case]
+The two notions are not exact complements: there are datasets which are neither
+separable nor non-separable in the above sense, namely when no $w$ achieves $y_i
+\langle w, x_i \rangle > 0$ for all $i$, but some $w \neq 0$ achieves $y_i \langle w,
+x_i \rangle \geq 0$ for all $i$ (some points then lie exactly on the decision
+boundary). This degenerate case has probability zero for data drawn from a density,
+and we leave it aside.
+\end{remark}
 
 Whether or not the data is separable completely changes the behaviour of $L$.
 
@@ -323,18 +337,19 @@ every minimising sequence $(w_k)$ (i.e. such that $L(w_k) \to 0$) satisfies $\Ve
 
 \begin{proof}
 Each term $\ln(1 + e^{-m})$ is strictly positive for every finite $m$, so $L(w) > 0$
-for every $w$, and the infimum cannot be attained at any finite point.
-
-Let $u$ be a separating direction and set $\rho \coloneqq \min_i y_i \langle u, x_i
-\rangle > 0$, the smallest margin it achieves. Walking along the ray
+for every $w$, and in particular $\inf L \geq 0$. To show that this infimum is in fact
+equal to $0$, let $u$ be a separating direction and set $\rho \coloneqq \min_i y_i
+\langle u, x_i \rangle > 0$, the smallest margin it achieves. Walking along the ray
 $t u$ with $t > 0$, every margin is multiplied by $t$:
 \[
 L(t u) = \frac1n \sum_{i=1}^n \ln\big( 1 + e^{-t\, y_i \langle u, x_i\rangle} \big)
 \ \leq \ \ln\big( 1 + e^{-t \rho} \big) \ \xrightarrow[t \to +\infty]{} \ 0 ,
 \]
-so $\inf L = 0$. Finally, if some minimising sequence had a bounded subsequence, it
-would have a convergent one, $w_{k_j} \to \bar w$, and continuity of $L$ would give
-$L(\bar w) = 0$, contradicting $L > 0$. Hence $\Vert w_k \Vert \to \infty$.
+so $\inf L \leq 0$, and hence $\inf L = 0$. Since $L(w) > 0$ for every $w$, this
+value $0$ is never reached: the infimum is not attained. Finally, if some minimising
+sequence had a bounded subsequence, it would have a convergent one,
+$w_{k_j} \to \bar w$, and continuity of $L$ would give $L(\bar w) = 0$, which we have
+just seen is impossible. Hence $\Vert w_k \Vert \to \infty$.
 \end{proof}
 
 The picture to keep in mind is this: once a separating direction $u$ is found, scaling
@@ -371,14 +386,14 @@ that problem down.
 \end{fact}
 
 \paragraph{Non-separable data: a minimum exists.}
-When the two classes overlap, no $w$ can classify everything correctly, the loss can
-no longer be driven to $0$. 
+When the two classes overlap, no $w$ can classify everything correctly, and the loss
+can no longer be driven to $0$.
 
 \begin{prop}[Existence of a minimiser]
 \label{prop:nonsep-min}
-Suppose that for every $w \neq 0$ there exists a datapoint such that  $y_i \langle w, x_i
-\rangle < 0$, i.e.\ that every candidate direction \emph{strictly} misclassifies at
-least one point. Then $L$ is coercive and attains its minimum.
+Suppose the data is non-separable, i.e.\ for every $w \neq 0$ there exists a datapoint
+such that $y_i \langle w, x_i \rangle < 0$. Then $L$ is coercive and attains its
+minimum.
 \end{prop}
 
 \begin{proof}
@@ -394,7 +409,7 @@ keeping only that term,
 L(w) \ \geq \ \frac1n \ln\big( 1 + e^{t \rho} \big) \ \geq \ \frac{t \rho}{n}
 \ \xrightarrow[\ \Vert w \Vert \to \infty\ ]{} \ \infty ,
 \]
-so $L$ is coercive. A continuous coercive function attains its minimum. 
+so $L$ is coercive. Since $L$ is also continuous, it attains its minimum by \Cref{prop:coercive-min}.
 \end{proof}
 
 
@@ -408,8 +423,9 @@ L_\lambda(w) = \frac{1}{n} \sum_{i=1}^n \ln\big( 1 + e^{- y_i \langle w, x_i \ra
 \]
 Being a sum of a convex function and a strictly convex one, $L_\lambda$ is strictly
 convex; and $L_\lambda(w) \geq \frac{\lambda}{2}\Vert w \Vert^2 \to \infty$, so it is
-coercive. By the argument used for ridge in \Cref{subsec:ridge}, it therefore admits a
-\emph{unique} minimiser, whatever the data, separable or not, and whatever the
+coercive. Being continuous and coercive, it admits a minimiser
+(\Cref{prop:coercive-min}), and being strictly convex, this minimiser is unique
+(\Cref{sec:cheat-convexity}). So $L_\lambda$ has a \emph{unique} minimiser, whatever the data, separable or not, and whatever the
 relative sizes of $n$ and $d$. The penalty is precisely what forbids the escape to
 infinity: buying more confidence now costs $\frac{\lambda}{2}\Vert w \Vert^2$, and at
 some finite point the purchase is no longer worth it. As before, there is still no
@@ -493,8 +509,10 @@ p_k(x) \coloneqq \frac{\exp\big( \langle w_k, x \rangle \big)}{\sum_{k'=1}^K \ex
 \qquad k = 1, \dots, K ,
 \]
 called the \emph{softmax weights}. They are positive, they sum to $1$, and the largest
-score gets the largest weight. They are the multiclass analogue of the steepness
-$\sigma(-m)$ of the binary case, and indeed for $K = 2$ they reduce to it.
+score gets the largest weight. For $K = 2$ they reduce to sigmoids:
+$p_1(x) = \sigma(\langle w_1 - w_2, x \rangle)$ and $p_2(x) = \sigma(-\langle w_1 - w_2,
+x \rangle)$. In particular, the steepness $\sigma(-m_i)$ of the binary case corresponds to
+$1 - p_{y_i}(x_i)$, the weight the softmax does \emph{not} put on the true class.
 
 \begin{prop}[Gradient of the cross-entropy]
 \label{prop:softmax-grad}
@@ -510,8 +528,8 @@ softmax currently puts on class $k$ with the weight we would like it to put ther
 namely $1$ for the true class and $0$ for all the others. If the sample is already
 classified with a comfortable margin, the softmax weights are already close to that
 target, the factor is nearly zero and the sample contributes almost nothing to the
-step; if it is misclassified, the factor is close to $\pm 1$ and the sample pushes
-hard. This is the exact multiclass counterpart of the reading we gave of the binary
+step; if it is confidently misclassified (the softmax puts almost all its weight on a
+wrong class), the factor is close to $\pm 1$ and the sample pushes hard. This is the exact multiclass counterpart of the reading we gave of the binary
 gradient. Exactly as in the binary case, too, setting all the $\nabla_{w_k} L$ to zero
 gives a system of transcendental equations with no closed-form solution, and we
 minimise by gradient descent.

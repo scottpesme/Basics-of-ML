@@ -56,8 +56,8 @@ etc. We turn them into numbers as follows.
     \texttt{green} \mapsto (0,1,0), \quad
     \texttt{blue} \mapsto (0,0,1) .
     \]
-    One might object that for $K = 2$ the one-hot encoding does not give back the "$-1/1$"
-    encoding of the previous item. It in fact does; as explained later in the notes.
+    One might object that for $K = 2$ the one-hot encoding does not give back the ``$-1/1$''
+    encoding of the previous item. It is in fact (in a certain sense) equivalent to it.
 \end{itemize}
 After such an encoding every input is again a genuine vector $x \in \R^d$, and
 the whole framework below applies unchanged.
@@ -108,12 +108,12 @@ so that the parameter $w$ has the same dimension $d$ as the input $x$ (i.e., $p 
 
 \paragraph{Nonlinear in the parameters.}
 Nothing forces $w$ to enter linearly. One may equally consider parametrisations
-in which the parameter appears \emph{inside} a nonlinear function: the resulting objective is non-convex in $w$, and must be tackled by
+in which the parameter appears \emph{inside} a nonlinear function: the resulting objective is typically non-convex in $w$, and must be tackled by
 iterative optimisation (e.g.\ gradient descent), with no guarantee of reaching a
-global minimum. The most prominent examples are neural networks.
+global minimum.
 
 \paragraph{Neural networks.}
-A prominent and very expressive parametrisation that is nonlinear in $w$ is a
+The most prominent and expressive parametrisation that is nonlinear in $w$ is a
 \emph{neural network}. In its simplest, one-hidden-layer form,
 \[
 f_w(x) = \sum_{k=1}^m a_k \, \sigma\big( \langle b_k, x\rangle + c_k \big),
@@ -122,7 +122,14 @@ where $\sigma$ is a fixed nonlinearity (e.g.\ a ReLU or a sigmoid) and the
 parameters $w = (a_k, b_k, c_k)_{k=1}^m$ gather all the weights. Increasing the
 width $m$ (or stacking several such layers) yields an extremely rich
 function class. The price to pay is, once more, a highly non-convex dependence
-on $w$, which is the central difficulty of modern deep learning. 
+on $w$, which is the central difficulty of modern deep learning.
+
+\begin{exercise}[$\star$]
+For the one-hidden-layer neural network above, with inputs $x \in \R^d$ and width $m$, what is the number $p$ of trainable parameters?
+\end{exercise}
+
+\paragraph{Why a continuous parameter space matters.}
+Whatever the parametrisation, the key point is that the search space is $\R^p$, a \emph{continuous} space. This is what makes learning amenable to optimisation: we can talk about how $L(w)$ changes when $w$ is perturbed by a small amount, compute gradients $\nabla L(w)$, and move $w$ step by step in a direction that decreases the loss. If instead the candidates were indexed by a \emph{discrete} set (say, $w \in \{0, 1\}^p$, or a finite list of hand-crafted rules), there would be no notion of gradient nor of ``small step'', and we would be left with combinatorial search over exponentially many candidates, which is in general much harder.
 
 
 \subsection{Choosing the loss function}
@@ -210,6 +217,7 @@ together with the squared-error loss. The function class is thus
 \[
 \F = \big\{\, x \mapsto \langle w, x \rangle \ : \ w \in \R^d \,\big\} .
 \]
+Note that in this setting the number of trainable parameters coincides with the dimension of the inputs: $p = d$. This is why, throughout this section, the parameter $w$ and the inputs $x_i$ live in the same space $\R^d$, and why comparing $n$ with $d$ amounts to comparing the number of samples with the number of parameters.
 
 \begin{remark}[Adding an intercept]
 Often we want an \emph{affine} predictor $f(x) = \langle w, x \rangle + b$ with
@@ -233,7 +241,7 @@ where the second equality follows from stacking the residuals
 $\langle w, x_i\rangle - y_i$ into the vector $Xw - y \in \R^n$. 
 
 \begin{remark}
-Notice that $L$ is a positive function, and that $L(w) = 0$ if and only if $X w = y$, i.e. if and only if the vector $w$ perfectly fits the dataset: $\langle x_i, w \rangle = y_i$ for all $i \in \{1, \dots, n\}$.
+Notice that $L$ is a non-negative function, and that $L(w) = 0$ if and only if $X w = y$, i.e. if and only if the vector $w$ perfectly fits the dataset: $\langle x_i, w \rangle = y_i$ for all $i \in \{1, \dots, n\}$.
 \end{remark}
 
 \noindent
@@ -308,8 +316,7 @@ $X^\top (X w^\star - y) = 0$.
 
 
 \begin{exercise}[$\star\star$]
-Assume $X^\top X$ is invertible, show that $L$ can be rewritten around its global
-minimiser $w^\star$ as:
+Let $w^\star$ be any global minimiser of $L$. Show that $L$ can be rewritten around $w^\star$ as:
 \[
 L(w) = L(w^\star) + \tfrac{1}{2n}\, \big\Vert X (w - w^\star) \big\Vert^2.
 \]
@@ -332,7 +339,7 @@ If the inputs $x_1, \dots, x_n$ are linearly independent (which requires $d \geq
 X : \R^d \to \R^n, \qquad w \mapsto Xw
 \]
 is surjective. Hence for \emph{every} response vector $y \in \R^n$ there exists at least one
-weight $w^\star$ with $Xw^\star = y$. This means that $y_i = \langle x_i, w^\star \rangle$ for all $i \in [n]$, which means that the
+weight $w^\star$ with $Xw^\star = y$. This means that $y_i = \langle x_i, w^\star \rangle$ for all $i \in \{1, \dots, n\}$, which means that the
 training data is fitted perfectly. Also note that this means that $L(w^\star) = \tfrac{1}{2n}\Vert Xw^\star - y\Vert^2 = 0$, hence that $w^\star \in \arg\min L$.
 \end{prop}
 
@@ -363,6 +370,12 @@ the \emph{minimum-norm} interpolant, i.e. the point of $S$ closest to the origin
 \[
 w^\dagger = \argmin_{w \,:\, Xw = y} \ \Vert w \Vert .
 \]
+
+\begin{remark}[Why is $w^\dagger$ unique?]
+Writing $w^\dagger$ as a single vector (rather than a set of minimisers) implicitly claims that this problem has exactly one solution. This holds because the function $w \mapsto \Vert w \Vert^2$ is strictly convex and $S$ is convex (it is an affine space). If $w_1 \neq w_2$ were two minimisers in $S$ with common norm $r$, then their midpoint $\tfrac{w_1 + w_2}{2}$ would also lie in $S$ and, by strict convexity, satisfy $\Vert \tfrac{w_1 + w_2}{2} \Vert^2 < \tfrac12 \Vert w_1 \Vert^2 + \tfrac12 \Vert w_2 \Vert^2 = r^2$, contradicting minimality.
+
+Geometrically, $w^\dagger$ is the orthogonal projection of the origin onto the affine space $S$, and the orthogonal projection onto a non-empty closed convex set is always unique. The proposition below gives an explicit formula for it.
+\end{remark}
 
 \begin{prop}[Minimum-norm solution]
 If $\rank(X) = n$, then $XX^\top \in \R^{n \times n}$ is invertible and
@@ -610,7 +623,7 @@ Write $V \coloneqq
 \spn(x_1, \dots, x_n)$ for this subspace.
 
 Throughout, we take for granted the following statement. It is a genuine
-\emph{theorem}, not a hypothesis on the data: it can be but it lies outside the scope of this class, so we simply admit it here.
+\emph{theorem}, not a hypothesis on the data: it can be proven, but the proof lies outside the scope of this class, so we simply admit it here.
 
 \begin{fact}[Convergence of the iterates, admitted]
 \label{fact:gd-converges}
@@ -898,19 +911,19 @@ w, x\rangle$ and the polynomial model $f_w(x) = \langle w, \phi(x)\rangle$ above
 are linear regression, even though the latter is a curved function of $x$. This
 is exactly the property that makes the least-squares objective a convex
 quadratic in $w$, and it is why everything proved so far survives untouched, as
-we now check.
+we checked above.
 \end{remark}
 
 \paragraph{Learnt features: back to neural networks.}
 Feature expansion also gives an interesting way of seeing the neural network we met in
-\Cref{subsec:function-class}. Grouping its hidden units into a vector, one can write:
+\Cref{subsec:function-class}. Grouping its hidden units into a vector, one can write
 \[
 f_w(x) = \sum_{k=1}^m a_k \, \sigma\big( \langle b_k, x \rangle + c_k \big)
 = \big\langle a, \phi_{b,c}(x) \big\rangle ,
 \qquad
 \phi_{b,c}(x) = \Big( \sigma\big( \langle b_k, x \rangle + c_k \big) \Big)_{1 \leq k \leq m} ,
 \]
-we see that a neural network is nothing but a linear model on top of a feature
+so that a neural network is nothing but a linear model on top of a feature
 map: the $m$ hidden neurons are the features, and the output weights $a \in
 \R^m$ play the role of $w$. If the inner parameters $(b_k, c_k)$ are frozen, for
 instance drawn at random once and never touched again, then $\phi_{b,c}$ is a

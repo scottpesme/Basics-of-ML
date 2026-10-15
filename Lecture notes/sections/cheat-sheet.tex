@@ -3,9 +3,9 @@
 \subsection{Centring and standardising the features}
 \label{subsec:standardise}
 
-Three separate places in these notes ask for the features to be rescaled before
-fitting, for three different reasons. Since it is the same operation every time, here
-it is once and for all.
+Several places in these notes (gradient descent, ridge regression, PCA, $K$-means) ask
+for the features to be rescaled before fitting. Since it is the same operation every
+time, here it is once and for all.
 
 \paragraph{The operation.}
 For each coordinate $j = 1, \dots, d$, compute the empirical mean and standard
@@ -30,7 +30,7 @@ model can be applied to it.
 \paragraph{Why: three reasons.}
 \begin{itemize}
     \item \emph{Conditioning, hence the speed of gradient descent}
-    (\Cref{rem:step-size}). The number of GD iterations is governed by the condition
+    (\Cref{rem:step-size}, and the gradient descent exercise of \Cref{sec:exercises}). The number of GD iterations is governed by the condition
     number $\lambda_{\max}(X^\top X)/\lambda_{\min}(X^\top X)$, because a single step
     size $\gamma$ must be small enough for the steepest direction while progress along
     the flattest one is set by the smallest eigenvalue. Features measured in wildly

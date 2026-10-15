@@ -190,7 +190,7 @@ matrix
 \hat \Sigma \ \coloneqq \ \frac{1}{n} X^\top X \ \in \R^{d \times d}
 \]
 is the object that decides everything: it is symmetric positive semi-definite (see
-\Cref{sec:cheat-convexity}), and the problem is now to maximise $\tr(V^\top \hat\Sigma
+\Cref{subsec:notations}), and the problem is now to maximise $\tr(V^\top \hat\Sigma
 V)$ over orthonormal $V$.
 
 \paragraph{Solving it.}
@@ -289,9 +289,8 @@ are rules of thumb rather than theorems: there is no test error here to minimise
 PCA is used as a preprocessing step before a supervised model, however, $K$ becomes an
 ordinary hyperparameter of that model and can be chosen honestly by cross-validation.
 
-\begin{remark}[Two warnings]
-\emph{Centring is not optional, scaling is a modelling
-choice.} PCA maximises variance, and variance has units: a feature measured in
+\begin{remark}[Centring is not optional, scaling is a modelling choice]
+PCA maximises variance, and variance has units: a feature measured in
 millimetres has a variance $10^6$ times larger than the same feature in metres, and
 will monopolise the first direction for no better reason. When the coordinates are
 heterogeneous quantities one therefore standardises them first
@@ -499,7 +498,7 @@ of the squared Euclidean distance in the objective.
     so it cannot be used to choose $K$ either. The usual device is again an
     \emph{elbow plot} of the final $\mathcal{L}$ against $K$, looking for the point
     where the curve flattens.
-    \item \emph{The clusters come out round, and of comparable size.} Minimising squared
+    \item \emph{The clusters come out round.} Minimising squared
     distances to a centre means the implied shape is a ball, and the boundary between
     two clusters is the hyperplane bisecting the segment between their centroids. Two
     interleaved crescents, or one long thin cluster next to a round one, will be cut in
